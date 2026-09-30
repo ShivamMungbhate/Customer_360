@@ -8,13 +8,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state variables
 init_session_state()
 
 def main():
-    # Define pages based on authentication state and role
+    
     if not st.session_state.get("logged_in", False):
-        # When logged out, ONLY show the login page
+        
         pages = {
             "Authentication": [
                 st.Page("pages/login.py", title="Sign In", icon="🔐", default=True)
@@ -27,10 +26,12 @@ def main():
             pages = {
                 "Customer Hub": [
                     st.Page("pages/customer_portal.py", title="Customer Portal", icon="👤", default=True),
+                    st.Page("pages/offers.py", title="Available Offers", icon="🎁"),
                     st.Page("pages/ai_assistant.py", title="Ask AI Assistant", icon="🤖"),
+                    st.Page("pages/settings.py", title="Settings", icon="🛠️"),
                 ]
             }
-        else:  # EMPLOYEE (Unified into a single, clean dictionary block)
+        else:  
             pages = {
                 "Employee Dashboard": [
                     st.Page("pages/employee_dashboard.py", title="Dashboard", icon="📊", default=True),
@@ -45,10 +46,10 @@ def main():
                 ]
             }
 
-    # Run navigation
+    
     pg = st.navigation(pages)
 
-    # Render a clean sidebar footer with user details and Log out button ONLY if logged in
+    
     if st.session_state.get("logged_in", False):
         with st.sidebar:
             st.markdown("---")
@@ -56,7 +57,7 @@ def main():
             st.caption(f"Role: **{st.session_state.get('role')}**")
             
             if st.button("🚪 Log out", use_container_width=True, type="primary"):
-                # Clear all session state variables to return to login state
+                
                 st.session_state.clear()
                 st.rerun()
 

@@ -1,0 +1,44 @@
+{
+    "employee@insurance.com": {
+        "password": "demo123",
+        "user_id": "EMP-01",
+        "role": "EMPLOYEE",
+        "customer_id": null
+    },
+    "priya@insurance.com": {
+        "password": "demo123",
+        "user_id": "EMP-02",
+        "role": "EMPLOYEE",
+        "customer_id": null
+    },
+    "customer@insurance.com": {
+        "password": "demo123",
+        "user_id": "USR-01",
+        "role": "CUSTOMER",
+        "customer_id": "CUST-1001"
+    },
+    "rahul@insurance.com": {
+        "password": "demo123",
+        "user_id": "USR-02",
+        "role": "CUSTOMER",
+        "customer_id": "CUST-1001"
+    },
+    "ananya@insurance.com": {
+        "password": "demo123",
+        "user_id": "USR-03",
+        "role": "CUSTOMER",
+        "customer_id": "CUST-1045"
+    },
+    "shivammungbhate671@gmail.com": {
+        "password": "Shivam30",
+        "user_id": "AUTO-105",
+        "role": "CUSTOMER",
+        "customer_id": "CUST-2005"
+    },
+    "square4oot@gmail.com": {
+        "password": "Shivam30",
+        "user_id": "AUTO-106",
+        "role": "EMPLOYEE",
+        "customer_id": null
+    }
+}

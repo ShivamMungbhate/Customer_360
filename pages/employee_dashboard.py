@@ -7,11 +7,13 @@ user_email = st.session_state.get("user_email", "RM User")
 
 rm_name = user_email.split("@")[0].capitalize()
 
-st.markdown(f"### Good morning, {rm_name}")
+display_name = st.session_state.get("display_name")
+if not display_name:
+    user_email = st.session_state.get("user_email", "RM User")
+    display_name = user_email.split("@")[0].capitalize()
+
+st.markdown(f"### Welcome, {display_name}")
 st.caption("Relationship Manager Command Center")
-st.markdown("---")
-
-
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Customers", "1,248")
 col2.metric("At Risk", "86", delta="-4 vs last week", delta_color="inverse")

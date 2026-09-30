@@ -8,9 +8,13 @@ enforce_customer_boundary()
 user_email = st.session_state.get("user_email", "customer@insurance.com")
 customer_name = "Rahul" if "customer" in user_email else user_email.split("@")[0].capitalize()
 
-st.markdown(f"### Welcome back, {customer_name} 👋")
-st.markdown("---")
 
+display_name = st.session_state.get("display_name")
+if not display_name:
+    user_email = st.session_state.get("user_email", "customer@insurance.com")
+    display_name = "Rahul" if "customer" in user_email else user_email.split("@")[0].capitalize()
+
+st.markdown(f"### Welcome back, {display_name} 👋")
 
 st.markdown("#### 🛡️ My Policies &nbsp;&nbsp;&nbsp; `2 Active`")
 
