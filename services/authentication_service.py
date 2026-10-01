@@ -1,71 +1,102 @@
-import json
-import os
+import streamlit as st
 
 
-DB_FILE = "users_db.json"
+def get_db_connection():
+    return st.connection("snowflake", type="snowflake")
 
-def _load_users():
-    """Loads users from the local JSON database file if it exists."""
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
-            
-    # Default
-    default_users = {
-        "employee@insurance.com": {"password": "demo123", "user_id": "EMP-01", "role": "EMPLOYEE", "customer_id": None},
-        "priya@insurance.com": {"password": "demo123", "user_id": "EMP-02", "role": "EMPLOYEE", "customer_id": None},
-        "customer@insurance.com": {"password": "demo123", "user_id": "USR-01", "role": "CUSTOMER", "customer_id": "CUST-1001"},
-        "rahul@insurance.com": {"password": "demo123", "user_id": "USR-02", "role": "CUSTOMER", "customer_id": "CUST-1001"},
-        "ananya@insurance.com": {"password": "demo123", "user_id": "USR-03", "role": "CUSTOMER", "customer_id": "CUST-1045"}
-    }
-    _save_users(default_users)
-    return default_users
-
-def _save_users(users_dict):
-    """Saves the updated users dictionary to the local JSON file."""
-    try:
-        with open(DB_FILE, "w") as f:
-            json.dump(users_dict, f, indent=4)
-    except Exception as e:
-        print(f"Error saving users DB: {e}")
 
 def authenticate_user(email: str, password: str, selected_role: str):
     """
-    Persistently registers new emails with their chosen password, 
-    and validates existing user passwords against stored records.
+    Authenticate a user directly against the Snowflake USERS table.
+
+    Expected USERS columns:
+        USER_ID
+        EMAIL
+        ROLE
+        CUSTOMER_ID
+        STATUS
+        PASSWORD_HASH
+
+    For the current demo, PASSWORD_HASH contains the plain demo password.
     """
+
     clean_email = email.strip().lower()
-    
+    clean_password = password.strip()
+    clean_role = selected_role.strip().upper()
+
     if not clean_email or "@" not in clean_email:
         return None, "Please enter a valid email address."
-        
-    users = _load_users()
+
+    if not clean_password:
+        return None, "Please enter your password."
+
+    conn = get_db_connection()
+
+    try:
+        users = conn.query(
+            """
+            SELECT
+                USER_ID,
+                EMAIL,
+                ROLE,
+                CUSTOMER_ID,
+                STATUS,
+                PASSWORD_HASH
+            FROM USERS
+            WHERE LOWER(EMAIL) = ?
+            LIMIT 1
+            """,
+            params=(clean_email,),
+            ttl=0
+        )
+
+    except Exception as e:
+        return None, f"Unable to connect to the authentication database: {e}"
+
+    if users.empty:
+        return None, "Invalid email or password."
+
+    user = users.iloc[0]
+
     
-    # If email is completely new, auto-register it and save the password they typed!
-    if clean_email not in users:
-        new_user_id = f"AUTO-{len(users) + 100}"
-        new_cust_id = f"CUST-{len(users) + 2000}" if selected_role == "CUSTOMER" else None
-        
-        users[clean_email] = {
-            "password": password,  # Saves their chosen password
-            "user_id": new_user_id,
-            "role": selected_role,
-            "customer_id": new_cust_id
-        }
-        _save_users(users)
-        return users[clean_email], None
-        
-    user_record = users[clean_email]
+    db_email = str(user["EMAIL"]).strip().lower()
+    db_role = str(user["ROLE"]).strip().upper()
+    db_status = str(user["STATUS"]).strip().upper()
+
+    db_password = user["PASSWORD_HASH"]
+
+    if db_password is None:
+        return None, "This account does not have a password configured."
+
+    db_password = str(db_password)
+
     
+    if db_status != "ACTIVE":
+        return None, "This account is not active. Please contact an administrator."
+
     
-    if user_record["role"] != selected_role:
-        return None, f"Access Denied: This email is already registered as a {user_record['role']}, not a {selected_role}."
-        
-    # Verify the password 
-    if user_record.get("password") == password:
-        return user_record, None
-    else:
-        return None, "Incorrect password. Please enter the password you used when registering."
+    if db_role != clean_role:
+        return (
+            None,
+            f"Access Denied: This email is registered as {db_role}, "
+            f"not {clean_role}."
+        )
+
+   
+    if db_password != clean_password:
+        return None, "Incorrect password. Please try again."
+
+    
+    user_record = {
+        "user_id": str(user["USER_ID"]),
+        "email": db_email,
+        "role": db_role,
+        "customer_id": (
+            None
+            if user["CUSTOMER_ID"] is None
+            else str(user["CUSTOMER_ID"])
+        ),
+        "status": db_status,
+    }
+
+    return user_record, None

@@ -40,5 +40,11 @@
         "user_id": "AUTO-106",
         "role": "EMPLOYEE",
         "customer_id": null
+    },
+    "mfgjtrj@gmail.com": {
+        "password": "33333333333333333333",
+        "user_id": "AUTO-107",
+        "role": "EMPLOYEE",
+        "customer_id": null
     }
 }
