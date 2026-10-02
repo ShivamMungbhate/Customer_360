@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 
+
 @st.cache_resource
 def get_db_connection():
     """
@@ -10,6 +11,7 @@ def get_db_connection():
     .streamlit/secrets.toml
     """
     return st.connection("snowflake", type="snowflake")
+
 
 def _normalize_customer_id(customer_id: str) -> str:
     """
@@ -27,6 +29,7 @@ def _normalize_customer_id(customer_id: str) -> str:
 def _empty_dataframe() -> pd.DataFrame:
     """Return an empty DataFrame when a query fails."""
     return pd.DataFrame()
+
 
 def get_customer_profile(customer_id: str) -> pd.DataFrame:
     """Fetch live customer profile from Snowflake CUSTOMERS table."""
@@ -54,6 +57,7 @@ def get_customer_profile(customer_id: str) -> pd.DataFrame:
     except Exception as e:
         st.error(f"Error fetching customer profile: {e}")
         return _empty_dataframe()
+
 
 def search_customers(search_text: str) -> pd.DataFrame:
     """Search customers by ID, name, city or state."""
@@ -83,18 +87,19 @@ def search_customers(search_text: str) -> pd.DataFrame:
         return conn.query(
             query,
             params=(
-        search_pattern,
-        search_pattern,
-        search_pattern,
-        search_pattern,
-        search_pattern,
-    ),
-    ttl=0
-)
+                search_pattern,
+                search_pattern,
+                search_pattern,
+                search_pattern,
+                search_pattern,
+            ),
+            ttl=0
+        )
 
     except Exception as e:
         st.error(f"Error searching customers: {e}")
         return _empty_dataframe()
+
 
 def get_customer_policies(customer_id: str) -> pd.DataFrame:
     """Fetch policies associated with a customer."""
@@ -124,6 +129,7 @@ def get_customer_policies(customer_id: str) -> pd.DataFrame:
         st.error(f"Error fetching policies: {e}")
         return _empty_dataframe()
 
+
 def get_customer_claims(customer_id: str) -> pd.DataFrame:
     """Fetch claims associated with a customer."""
 
@@ -151,6 +157,7 @@ def get_customer_claims(customer_id: str) -> pd.DataFrame:
     except Exception as e:
         st.error(f"Error fetching claims: {e}")
         return _empty_dataframe()
+
 
 def get_customer_payments(customer_id: str) -> pd.DataFrame:
     """Fetch payment history for a customer."""
@@ -180,6 +187,7 @@ def get_customer_payments(customer_id: str) -> pd.DataFrame:
         st.error(f"Error fetching payments: {e}")
         return _empty_dataframe()
 
+
 def get_customer_interactions(customer_id: str) -> pd.DataFrame:
     """Fetch customer interactions and transcripts."""
 
@@ -207,6 +215,7 @@ def get_customer_interactions(customer_id: str) -> pd.DataFrame:
     except Exception as e:
         st.error(f"Error fetching interactions: {e}")
         return _empty_dataframe()
+
 
 def get_ai_insights(customer_id: str) -> pd.DataFrame:
     """
@@ -240,6 +249,7 @@ def get_ai_insights(customer_id: str) -> pd.DataFrame:
     except Exception:
         return _empty_dataframe()
 
+
 def get_next_best_actions(customer_id: str) -> pd.DataFrame:
     """Fetch stored Next Best Action recommendations."""
 
@@ -266,6 +276,7 @@ def get_next_best_actions(customer_id: str) -> pd.DataFrame:
 
     except Exception:
         return _empty_dataframe()
+
 
 def get_customer_actions(customer_id: str) -> pd.DataFrame:
     """
@@ -402,7 +413,6 @@ def create_action_history(
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), ?, NULL)
         """
 
-        
         session = conn.session()
 
         session.sql(
@@ -492,7 +502,8 @@ def update_action_status(
             f"{type(e).__name__}: {e}"
         )
         return False
-        
+
+
 def update_action_employee(
     action_id: str,
     employee_id: str,
@@ -606,7 +617,6 @@ def get_all_ai_insights() -> pd.DataFrame:
         return _empty_dataframe()
 
 
-
 def get_customer_360(customer_id: str) -> pd.DataFrame:
     """
     Fetch consolidated Customer 360 view.
@@ -702,3 +712,37 @@ def get_system_health() -> dict:
         table: get_table_count(table)
         for table in tables
     }
+
+
+def get_all_policy_feedback():
+    """
+    Returns all customer policy feedback from Snowflake.
+    Feedback is displayed in the employee UI only and is
+    not used for AI analysis.
+    """
+
+    try:
+        conn = get_db_connection()
+
+        query = """
+            SELECT
+                FEEDBACK_ID,
+                CUSTOMER_ID,
+                POLICY_ID,
+                RATING,
+                CATEGORY,
+                COMMENTS,
+                RECOMMENDATION,
+                CREATED_AT
+            FROM POLICY_FEEDBACK
+            ORDER BY CREATED_AT DESC
+        """
+
+        return conn.query(query, ttl=0)
+
+    except Exception as e:
+        st.error(
+            f"Snowflake error while loading policy feedback: "
+            f"{type(e).__name__}: {e}"
+        )
+        return _empty_dataframe()
