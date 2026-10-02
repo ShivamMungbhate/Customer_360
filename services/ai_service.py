@@ -1,56 +1,10 @@
-'''import ollama
-
-def query_local_llm(prompt: str, model_name: str = "llama3") -> str:
-    """
-    Sends a prompt to the local Ollama LLM and returns the response.
-    Make sure Ollama is running on your machine.
-    """
-    try:
-        response = ollama.chat(
-            model=model_name, 
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are an expert insurance AI assistant. You help employees and customers understand customer risk profiles, churn signals, policy details, and next best actions clearly and concisely based on evidence."
-                },
-                {
-                    "role": "user", 
-                    "content": prompt
-                }
-            ]
-        )
-        return response["message"]["content"]
-    except Exception as e:
-        return f"⚠️ **Ollama Connection Error:** Could not connect to local model (`{model_name}`). Ensure Ollama is open and running on your PC. Error details: `{str(e)}`"
-
-def process_transcript_to_insights(transcript_text: str, model_name: str = "llama3"):
-    """
-    Transforms unstructured text into structured insights as required by Section 3.
-    """
-    prompt = f"""
-    Analyze the following customer interaction transcript and return a structured assessment:
-    Transcript: "{transcript_text}"
-    
-    Provide your output clearly with:
-    - Sentiment (Positive / Neutral / Negative / UNKNOWN)
-    - Intent (e.g., Billing Inquiry, Claim Status, Cancellation Threat)
-    - Topic
-    - Churn Signal (High / Medium / Low / None)
-    - Urgency (High / Medium / Low)
-    - Confidence (Percentage)
-    
-    If information is missing, explicitly return UNKNOWN instead of hallucinating.
-    """
-    return query_local_llm(prompt, model_name=model_name)'''
-
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-try:
-    import ollama
-except ImportError:
-    ollama = None
+import streamlit as st
 
+
+CORTEX_DEFAULT_MODEL = "llama3.1-8b"
 
 SYSTEM_PROMPT = """
 You are an expert insurance AI assistant.
@@ -68,49 +22,45 @@ You must:
 """
 
 
+def _get_cortex_connection():
+    return st.connection("snowflake", type="snowflake")
+
+
 def query_local_llm(
     prompt: str,
-    model_name: str = "llama3"
+    model_name: str = CORTEX_DEFAULT_MODEL,
 ) -> str:
     """
-    Query the optional local Ollama LLM.
+    Query Snowflake Cortex AI via SNOWFLAKE.CORTEX.COMPLETE.
 
-    Ollama is treated as an optional development/local AI provider.
-    The application should not fail if Ollama is unavailable.
+    This replaces the previous local Ollama backend so the
+    application works inside Snowflake-hosted Streamlit.
     """
 
-    if ollama is None:
-        return (
-            "⚠️ Local AI provider is unavailable. "
-            "The Ollama Python package is not installed."
-        )
+    full_prompt = SYSTEM_PROMPT.strip() + "\n\n" + prompt
 
     try:
-        response = ollama.chat(
-            model=model_name,
-            messages=[
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
-            ],
+        conn = _get_cortex_connection()
+
+        result = conn.query(
+            "SELECT SNOWFLAKE.CORTEX.COMPLETE(?, ?) AS RESPONSE",
+            params=(model_name, full_prompt),
+            ttl=0,
         )
 
-        message = response.get("message", {})
-        content = message.get("content")
+        if result.empty:
+            return "UNKNOWN"
+
+        content = result.iloc[0]["RESPONSE"]
 
         if not content:
             return "UNKNOWN"
 
-        return content.strip()
+        return str(content).strip()
 
     except Exception as e:
         return (
-            f"⚠️ Local AI provider unavailable for model "
+            f"⚠️ Snowflake Cortex AI unavailable for model "
             f"`{model_name}`. "
             f"Error: {str(e)}"
         )
@@ -118,7 +68,7 @@ def query_local_llm(
 
 def process_transcript_to_insights(
     transcript_text: str,
-    model_name: str = "llama3"
+    model_name: str = CORTEX_DEFAULT_MODEL,
 ) -> Dict[str, Any]:
     """
     Transform an unstructured customer transcript into structured insights.
@@ -209,7 +159,7 @@ Rules:
 
 def _parse_json_response(response: str) -> Dict[str, Any]:
     """
-    Safely parse JSON returned by the local LLM.
+    Safely parse JSON returned by the LLM.
 
     Handles cases where the model wraps JSON in markdown fences.
     """
@@ -239,7 +189,7 @@ def _parse_json_response(response: str) -> Dict[str, Any]:
 
 
 def _normalize_insight_result(
-    result: Dict[str, Any]
+    result: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Normalize and validate AI-generated insight values.
@@ -325,7 +275,7 @@ def _normalize_insight_result(
 
 def generate_customer_ai_summary(
     customer_context: str,
-    model_name: str = "llama3"
+    model_name: str = CORTEX_DEFAULT_MODEL,
 ) -> str:
     """
     Generate a concise evidence-based Customer 360 summary.
@@ -364,7 +314,7 @@ If information is unavailable, explicitly say UNKNOWN.
 def explain_next_best_action(
     customer_context: str,
     recommended_action: str,
-    model_name: str = "llama3"
+    model_name: str = CORTEX_DEFAULT_MODEL,
 ) -> str:
     """
     Explain why a Next Best Action was recommended.
