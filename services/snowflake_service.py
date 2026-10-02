@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import uuid
 
 @st.cache_resource
 def get_db_connection():
@@ -213,7 +212,7 @@ def get_ai_insights(customer_id: str) -> pd.DataFrame:
     """
     Fetch AI-generated customer insights.
 
-    AI_INSIGHTS is not yet part of the active database pipeline,
+    CUSTOMER_INSIGHTS is not yet part of the active database pipeline,
     so missing-table/query errors are silently handled.
     """
 
@@ -227,7 +226,7 @@ def get_ai_insights(customer_id: str) -> pd.DataFrame:
 
         query = """
             SELECT *
-            FROM AI_INSIGHTS
+            FROM CUSTOMER_INSIGHTS
             WHERE CUSTOMER_ID = ?
             ORDER BY GENERATED_AT DESC
         """
@@ -586,7 +585,7 @@ def get_all_ai_insights() -> pd.DataFrame:
     """
     Fetch all AI insights.
 
-    Returns an empty DataFrame until AI_INSIGHTS is available.
+    Returns an empty DataFrame until CUSTOMER_INSIGHTS is available.
     """
 
     try:
@@ -594,7 +593,7 @@ def get_all_ai_insights() -> pd.DataFrame:
 
         query = """
             SELECT *
-            FROM AI_INSIGHTS
+            FROM CUSTOMER_INSIGHTS
             ORDER BY GENERATED_AT DESC
         """
 
@@ -649,7 +648,7 @@ def get_table_count(table_name: str) -> int:
         "CLAIMS",
         "PAYMENTS",
         "INTERACTIONS",
-        "AI_INSIGHTS",
+        "CUSTOMER_INSIGHTS",
         "NEXT_BEST_ACTIONS",
         "ACTION_HISTORY",
         "USERS",
@@ -693,7 +692,7 @@ def get_system_health() -> dict:
         "CLAIMS",
         "PAYMENTS",
         "INTERACTIONS",
-        "AI_INSIGHTS",
+        "CUSTOMER_INSIGHTS",
         "NEXT_BEST_ACTIONS",
         "ACTION_HISTORY",
         "USERS",
@@ -703,141 +702,3 @@ def get_system_health() -> dict:
         table: get_table_count(table)
         for table in tables
     }
-def create_policy_feedback(
-    customer_id: str,
-    policy_id: str,
-    rating: int,
-    category: str,
-    comments: str,
-    recommendation: str,
-) -> bool:
-
-    try:
-        conn = get_db_connection()
-
-        feedback_id = f"FB-{uuid.uuid4().hex[:12].upper()}"
-
-        query = """
-            INSERT INTO POLICY_FEEDBACK (
-                FEEDBACK_ID,
-                CUSTOMER_ID,
-                POLICY_ID,
-                RATING,
-                CATEGORY,
-                COMMENTS,
-                RECOMMENDATION
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """
-
-        params = [
-            feedback_id,
-            str(customer_id),
-            str(policy_id),
-            int(rating),
-            str(category),
-            str(comments).strip(),
-            str(recommendation),
-        ]
-
-        conn.query(
-            query,
-            params=params,
-            ttl=0,
-        )
-
-        # The INSERT may succeed even if Streamlit/Snowflake
-        # raises NotSupportedError afterward.
-        return True
-
-    except Exception as e:
-
-        error_text = str(e)
-
-        # Snowflake/Streamlit can report NotSupportedError
-        # even though the INSERT has already happened.
-        if type(e).__name__ == "NotSupportedError":
-
-            st.warning(
-                "Feedback submission completed. "
-                "Please check your feedback history if needed."
-            )
-
-            return True
-
-        st.error(
-            f"""
-            ❌ Error saving policy feedback
-
-            **Error Type:** `{type(e).__name__}`
-
-            **Error:** `{error_text}`
-            """
-        )
-
-        return False
-        
-def get_policy_feedback(customer_id: str, policy_id: str):
-    try:
-        conn = get_db_connection()
-
-        query = """
-            SELECT
-                FEEDBACK_ID,
-                CUSTOMER_ID,
-                POLICY_ID,
-                RATING,
-                CATEGORY,
-                COMMENTS,
-                RECOMMENDATION,
-                CREATED_AT
-            FROM POLICY_FEEDBACK
-            WHERE CUSTOMER_ID = ?
-              AND POLICY_ID = ?
-            ORDER BY CREATED_AT DESC
-        """
-
-        return conn.query(
-            query,
-            params=[str(customer_id), str(policy_id)],
-            ttl=0,
-        )
-
-    except Exception as e:
-        st.error(
-            f"Snowflake error while fetching feedback: "
-            f"{type(e).__name__}: {e}"
-        )
-        return None
-
-def get_all_policy_feedback():
-    """
-    Returns all customer policy feedback from Snowflake.
-    Feedback is displayed in the employee UI only and is
-    not used for AI analysis.
-    """
-    try:
-        conn = get_db_connection()
-
-        query = """
-            SELECT
-                FEEDBACK_ID,
-                CUSTOMER_ID,
-                POLICY_ID,
-                RATING,
-                CATEGORY,
-                COMMENTS,
-                RECOMMENDATION,
-                CREATED_AT
-            FROM POLICY_FEEDBACK
-            ORDER BY CREATED_AT DESC
-        """
-
-        return conn.query(query, ttl=0)
-
-    except Exception as e:
-        st.error(
-            f"Snowflake error while loading policy feedback: "
-            f"{type(e).__name__}: {e}"
-        )
-        return _empty_dataframe()
