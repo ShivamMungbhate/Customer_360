@@ -8,7 +8,10 @@ from services.snowflake_service import (
     get_all_interactions,
     get_all_ai_insights,
     get_all_policy_feedback,
+    upsert_customer_insight,
 )
+
+from services.ai_service import process_transcript_to_insights
 enforce_employee_boundary()
 
 st.title("💬 Interactions & AI Insights")
@@ -295,6 +298,56 @@ else:
                     "🤖 No AI insight available for this interaction."
                 )
 
+                if transcript:
+                    if st.button(
+                        "🧠 Analyze with Cortex",
+                        key=f"analyze_cortex_{interaction_id}",
+                    ):
+                        with st.spinner("Analyzing transcript with Cortex..."):
+                            result = process_transcript_to_insights(
+                                transcript
+                            )
+
+                        if result.get("status") == "SUCCESS":
+                            saved = upsert_customer_insight(
+                                customer_id=customer_id,
+                                interaction_id=interaction_id,
+                                sentiment=result.get(
+                                    "sentiment",
+                                    "UNKNOWN",
+                                ),
+                                intent=result.get(
+                                    "intent",
+                                    "UNKNOWN",
+                                ),
+                                topic=result.get(
+                                    "topic",
+                                    "UNKNOWN",
+                                ),
+                                churn_signal=result.get(
+                                    "churn_signal",
+                                    "UNKNOWN",
+                                ),
+                                urgency=result.get(
+                                    "urgency",
+                                    "UNKNOWN",
+                                ),
+                                confidence=result.get(
+                                    "confidence"
+                                ),
+                            )
+
+                            if saved:
+                                st.success(
+                                    "AI insight generated successfully."
+                                )
+                                st.rerun()
+                        else:
+                            st.warning(
+                                "Cortex could not generate a valid insight: "
+                                f"{result.get('evidence', 'Unknown error')}"
+                            )
+
             else:
 
                 insight = matching_insights.iloc[0]
@@ -407,6 +460,56 @@ else:
                         st.caption(
                             f"Topic: **{topic}**"
                         )
+
+                if transcript:
+                    if st.button(
+                        "🔄 Re-analyze with Cortex",
+                        key=f"reanalyze_cortex_{interaction_id}",
+                    ):
+                        with st.spinner("Re-analyzing transcript with Cortex..."):
+                            result = process_transcript_to_insights(
+                                transcript
+                            )
+
+                        if result.get("status") == "SUCCESS":
+                            saved = upsert_customer_insight(
+                                customer_id=customer_id,
+                                interaction_id=interaction_id,
+                                sentiment=result.get(
+                                    "sentiment",
+                                    "UNKNOWN",
+                                ),
+                                intent=result.get(
+                                    "intent",
+                                    "UNKNOWN",
+                                ),
+                                topic=result.get(
+                                    "topic",
+                                    "UNKNOWN",
+                                ),
+                                churn_signal=result.get(
+                                    "churn_signal",
+                                    "UNKNOWN",
+                                ),
+                                urgency=result.get(
+                                    "urgency",
+                                    "UNKNOWN",
+                                ),
+                                confidence=result.get(
+                                    "confidence"
+                                ),
+                            )
+
+                            if saved:
+                                st.success(
+                                    "AI insight updated successfully."
+                                )
+                                st.rerun()
+                        else:
+                            st.warning(
+                                "Cortex could not generate a valid insight: "
+                                f"{result.get('evidence', 'Unknown error')}"
+                            )
 
 
 st.markdown("---")
