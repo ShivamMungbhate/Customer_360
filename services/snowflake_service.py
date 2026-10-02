@@ -746,3 +746,103 @@ def get_all_policy_feedback():
             f"{type(e).__name__}: {e}"
         )
         return _empty_dataframe()
+
+def get_policy_feedback(
+    customer_id: str,
+    policy_id: str
+) -> pd.DataFrame:
+    customer_id = _normalize_customer_id(customer_id)
+
+    if not customer_id or not policy_id:
+        return _empty_dataframe()
+
+    try:
+        conn = get_db_connection()
+
+        query = """
+            SELECT
+                FEEDBACK_ID,
+                CUSTOMER_ID,
+                POLICY_ID,
+                RATING,
+                CATEGORY,
+                COMMENTS,
+                RECOMMENDATION,
+                CREATED_AT
+            FROM CUSTOMER360_DB.PUBLIC.POLICY_FEEDBACK
+            WHERE CUSTOMER_ID = ?
+              AND POLICY_ID = ?
+            ORDER BY CREATED_AT DESC
+        """
+
+        return conn.query(
+            query,
+            params=(
+                customer_id,
+                str(policy_id).strip()
+            ),
+            ttl=0
+        )
+
+    except Exception as e:
+        st.error(f"Error fetching policy feedback: {e}")
+        return _empty_dataframe()
+
+def create_policy_feedback(
+    customer_id: str,
+    policy_id: str,
+    rating: int,
+    category: str,
+    comments: str,
+    recommendation: str
+) -> bool:
+    """
+    Save customer policy feedback to Snowflake.
+    """
+
+    try:
+        conn = get_db_connection()
+
+        feedback_id = (
+            f"FB-{customer_id}-{policy_id}-"
+            f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S%f')}"
+        )
+
+        query = """
+            INSERT INTO CUSTOMER360_DB.PUBLIC.POLICY_FEEDBACK
+            (
+                FEEDBACK_ID,
+                CUSTOMER_ID,
+                POLICY_ID,
+                RATING,
+                CATEGORY,
+                COMMENTS,
+                RECOMMENDATION,
+                CREATED_AT
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
+        """
+
+        session = conn.session()
+
+        session.sql(
+            query,
+            params=[
+                str(feedback_id),
+                str(customer_id).strip().upper(),
+                str(policy_id).strip(),
+                int(rating),
+                str(category).strip(),
+                str(comments).strip(),
+                str(recommendation).strip().upper(),
+            ],
+        ).collect()
+
+        return True
+
+    except Exception as e:
+        st.error(
+            f"Snowflake error while creating policy feedback: "
+            f"{type(e).__name__}: {e}"
+        )
+        return False
