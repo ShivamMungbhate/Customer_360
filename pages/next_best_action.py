@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from utils.security import enforce_employee_boundary
+from services.ai_service import explain_next_best_action
 
 from services.snowflake_service import (
     get_all_customers,
@@ -15,8 +16,7 @@ enforce_employee_boundary()
 
 st.title("⚡ Next Best Action")
 st.caption(
-    "Live customer recommendations based on Snowflake data. "
-    "AI insights will be integrated later."
+    "Live customer recommendations using Snowflake data and Cortex AI insights."
 )
 
 
@@ -198,7 +198,48 @@ with st.spinner("Loading customer data..."):
         customer_id
     )
 
-ai_insights_df = pd.DataFrame()
+ai_insights_df = get_ai_insights(customer_id)
+
+# Build a compact evidence context for the optional "Why this action?"
+# explanation. The explanation uses the same live customer data and
+# stored Cortex insights already loaded on this page.
+customer_context_parts = [
+    f"Customer ID: {customer_id}",
+    f"Customer name: {customer_name}",
+    f"Policies: {len(policies_df)}",
+    f"Claims: {len(claims_df)}",
+    f"Payments: {len(payments_df)}",
+    f"Interactions: {len(interactions_df)}",
+]
+
+if not policies_df.empty:
+    customer_context_parts.append(
+        "POLICIES:\n" + policies_df.to_string(index=False, max_rows=10)
+    )
+
+if not claims_df.empty:
+    customer_context_parts.append(
+        "CLAIMS:\n" + claims_df.to_string(index=False, max_rows=10)
+    )
+
+if not payments_df.empty:
+    customer_context_parts.append(
+        "PAYMENTS:\n" + payments_df.to_string(index=False, max_rows=10)
+    )
+
+if not interactions_df.empty:
+    customer_context_parts.append(
+        "INTERACTIONS:\n"
+        + interactions_df.to_string(index=False, max_rows=10)
+    )
+
+if not ai_insights_df.empty:
+    customer_context_parts.append(
+        "CORTEX AI INSIGHTS:\n"
+        + ai_insights_df.to_string(index=False, max_rows=10)
+    )
+
+customer_context = "\n\n".join(customer_context_parts)
 
 st.markdown("---")
 
@@ -546,6 +587,105 @@ if (
 
             })
 
+# ============================================================
+# AI-AWARE NEXT BEST ACTIONS
+# ============================================================
+# Use the stored Cortex insights as an additional decision signal.
+# The existing customer/policy/claim/payment rules remain in place;
+# these AI-aware recommendations add context from CUSTOMER_INSIGHTS.
+
+if not ai_insights_df.empty:
+    insight = ai_insights_df.iloc[0]
+
+    sentiment = str(insight.get("SENTIMENT", "")).strip().upper()
+    intent = str(insight.get("INTENT", "")).strip().upper()
+    topic = str(insight.get("TOPIC", "")).strip()
+    churn_signal = str(insight.get("CHURN_SIGNAL", "")).strip().upper()
+    urgency = str(insight.get("URGENCY", "")).strip().upper()
+
+    confidence_value = insight.get("CONFIDENCE")
+    try:
+        confidence_text = f"{float(confidence_value):.0%}"
+    except (TypeError, ValueError):
+        confidence_text = "N/A"
+
+    retention_signal = (
+        churn_signal == "HIGH"
+        and (
+            sentiment == "NEGATIVE"
+            or "RETENTION" in intent
+            or "CANCEL" in intent
+            or "CANCELLATION" in topic.upper()
+        )
+    )
+
+    if retention_signal:
+        recommendations.append({
+            "ACTION_TYPE": "RETENTION",
+            "ACTION": "AI-guided retention outreach",
+            "PRIORITY": "HIGH",
+            "REASON": (
+                "Cortex detected a high churn signal with "
+                f"{sentiment.lower()} sentiment and intent/topic "
+                f"related to {intent.lower() or topic.lower()}."
+            ),
+            "EVIDENCE": (
+                f"Sentiment: {sentiment.title()}; "
+                f"Churn: {churn_signal.title()}; "
+                f"Urgency: {urgency.title()}; "
+                f"Confidence: {confidence_text}; "
+                f"Topic: {topic or 'N/A'}"
+            ),
+        })
+
+    elif urgency == "HIGH":
+        recommendations.append({
+            "ACTION_TYPE": "SERVICE",
+            "ACTION": "Priority customer follow-up",
+            "PRIORITY": "HIGH",
+            "REASON": (
+                "Cortex marked the customer's interaction as high urgency."
+            ),
+            "EVIDENCE": (
+                f"Urgency: {urgency.title()}; "
+                f"Sentiment: {sentiment.title()}; "
+                f"Churn: {churn_signal.title()}; "
+                f"Confidence: {confidence_text}"
+            ),
+        })
+
+    elif churn_signal == "MEDIUM" and sentiment == "NEGATIVE":
+        recommendations.append({
+            "ACTION_TYPE": "SERVICE",
+            "ACTION": "Proactive customer follow-up",
+            "PRIORITY": "MEDIUM",
+            "REASON": (
+                "Cortex detected negative sentiment with a medium "
+                "churn signal."
+            ),
+            "EVIDENCE": (
+                f"Sentiment: {sentiment.title()}; "
+                f"Churn: {churn_signal.title()}; "
+                f"Urgency: {urgency.title()}; "
+                f"Confidence: {confidence_text}"
+            ),
+        })
+
+    elif "RENEW" in intent or "RENEW" in topic.upper():
+        recommendations.append({
+            "ACTION_TYPE": "RETENTION",
+            "ACTION": "AI-guided renewal follow-up",
+            "PRIORITY": "MEDIUM",
+            "REASON": (
+                "Cortex identified a renewal-related customer intent/topic."
+            ),
+            "EVIDENCE": (
+                f"Intent: {intent.title()}; "
+                f"Topic: {topic or 'N/A'}; "
+                f"Confidence: {confidence_text}"
+            ),
+        })
+
 unique_recommendations = []
 
 seen = set()
@@ -651,6 +791,27 @@ else:
                     ]
                 )
 
+            st.markdown("#### 💡 Why this action?")
+
+            if st.button(
+                "Explain with Cortex",
+                key=f"explain_nba_{customer_id}_{index}",
+            ):
+                with st.spinner("Explaining recommendation with Cortex..."):
+                    explanation = explain_next_best_action(
+                        customer_context=customer_context,
+                        recommended_action=recommendation["ACTION"],
+                    )
+
+                if explanation and not explanation.startswith("⚠️"):
+                    st.info(explanation)
+                elif explanation:
+                    st.error(explanation)
+                else:
+                    st.warning(
+                        "Cortex did not return an explanation."
+                    )
+
 st.markdown("---")
 
 st.subheader(
@@ -737,14 +898,36 @@ with tab4:
 
 st.markdown("---")
 
-st.subheader("🤖 AI Insights")
+st.subheader("🤖 AI Insights & Explainability")
 
-st.info(
-    "AI insights are reserved for the next phase. "
-    "The NBA engine is currently using live "
-    "customer, policy, claim, payment, and "
-    "interaction data only."
-)
+if ai_insights_df.empty:
+    st.info("No AI insights are available for this customer yet.")
+else:
+    st.success(
+        f"{len(ai_insights_df)} AI insight(s) loaded from Cortex."
+    )
+
+    display_columns = [
+        "SENTIMENT",
+        "INTENT",
+        "TOPIC",
+        "CHURN_SIGNAL",
+        "URGENCY",
+        "CONFIDENCE",
+    ]
+
+    available_columns = [
+        column
+        for column in display_columns
+        if column in ai_insights_df.columns
+    ]
+
+    if available_columns:
+        st.dataframe(
+            ai_insights_df[available_columns],
+            use_container_width=True,
+            hide_index=True,
+        )
 
 st.subheader("📌 Action Execution")
 
