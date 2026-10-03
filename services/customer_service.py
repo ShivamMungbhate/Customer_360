@@ -115,6 +115,7 @@ def fetch_customer_360(customer_id: str):
     ):
 
         open_claims = int(
+            (
             ~claims_df["CLAIM_STATUS"]
             .astype(str)
             .str.upper()
@@ -125,7 +126,7 @@ def fetch_customer_360(customer_id: str):
                     "REJECTED",
                 ]
             )
-        ).sum()
+        ).sum())
 
 
     return {

@@ -15,8 +15,7 @@ role = str(
     st.session_state.get("role", "CUSTOMER")
 ).upper()
 
-# Use the Snowflake Cortex model that is confirmed to work
-# in this project/account.
+
 active_model = st.session_state.get(
     "bg_llm_model",
     "llama3.1-8b",
@@ -122,6 +121,9 @@ user_query = st.text_area(
 )
 
 
+
+
+
 if st.button(
     "Generate AI Response",
     type="primary",
@@ -130,19 +132,128 @@ if st.button(
 
     if not user_query.strip():
 
-        st.warning(
-            "Please enter a question first."
-        )
+        st.warning("Please enter a question first.")
 
     else:
 
-        if customer_context:
+        if role == "EMPLOYEE":
 
-            final_prompt = f"""
+            if customer_context:
+
+                final_prompt = f"""
+You are an insurance Customer 360 AI assistant helping an
+authorized insurance employee.
+
+The employee may ask questions about the selected customer,
+insurance concepts, policies, claims, payments, interactions,
+risk, retention, or business processes.
+
+A specific customer context is available below.
+
+CUSTOMER CONTEXT:
+{customer_context}
+
+EMPLOYEE QUESTION:
+{user_query}
+
+Instructions:
+
+1. Answer the employee's question directly and precisely.
+
+2. When the question concerns the selected customer, use the
+   CUSTOMER CONTEXT as the primary source of truth.
+
+3. Never invent customer-specific facts.
+
+4. If the customer context does not contain enough information
+   to answer a customer-specific question, clearly say that the
+   required customer data is unavailable.
+
+5. You may use your general insurance knowledge to explain
+   insurance concepts, terminology, processes, or implications
+   when the question is not asking for a specific customer fact.
+
+6. Clearly distinguish:
+   - facts present in the customer data
+   - reasonable interpretation
+   - general insurance knowledge
+
+7. For numerical or factual customer questions, rely on the
+   supplied customer data rather than guessing.
+
+8. Never make up policy numbers, claim amounts, dates, payments,
+   customer details, risk scores, or interaction details.
+
+9. Do not reveal information about other customers.
+
+10. If the employee asks something unrelated to the selected
+    customer, answer it using general knowledge when possible.
+
+11. Keep the answer concise but provide enough explanation to
+    make the answer useful to an insurance employee.
+
+12. If the available information is insufficient, explicitly say
+    what information is missing.
+
+Answer the employee now.
+"""
+
+            else:
+
+                final_prompt = f"""
+You are an insurance Customer 360 AI assistant helping an
+authorized insurance employee.
+
+No specific customer has been selected for this question.
+
+EMPLOYEE QUESTION:
+{user_query}
+
+Instructions:
+
+1. Answer the employee's question directly and precisely.
+
+2. You may use your general knowledge to answer questions about:
+   - insurance concepts
+   - insurance terminology
+   - claims processes
+   - policy concepts
+   - customer service
+   - retention
+   - churn
+   - risk concepts
+   - general business processes
+   - general analytical reasoning
+
+3. Do NOT invent information about customers, policies, claims,
+   payments, interactions, employees, or database records.
+
+4. If the employee asks for a specific customer, policy, claim,
+   payment, interaction, count, list, or database value that is
+   not provided in the current context, clearly state that the
+   required application data is unavailable.
+
+5. Do not pretend that you queried Snowflake or the application
+   database.
+
+6. Do not fabricate numerical results.
+
+7. Clearly distinguish general knowledge from application data.
+
+8. If the question is ambiguous, explain the ambiguity and answer
+   the most reasonable interpretation without inventing facts.
+
+9. Keep the answer concise, professional, and useful.
+
+Answer the employee now.
+"""
+
+        else:
+
+            if customer_context:
+
+                final_prompt = f"""
 You are an insurance Customer 360 AI assistant.
-
-Answer the user's question using ONLY the customer evidence
-provided below.
 
 CUSTOMER EVIDENCE:
 {customer_context}
@@ -150,31 +261,37 @@ CUSTOMER EVIDENCE:
 USER QUESTION:
 {user_query}
 
-Rules:
+Instructions:
+
+- Answer using the supplied customer evidence when the question
+  concerns the customer.
 - Do not invent customer facts.
-- If the available evidence does not answer the question,
-  clearly say that the required data is unavailable.
-- Separate observed facts from interpretation.
-- Keep the response concise and useful.
-- Do not expose private information belonging to another customer.
+- You may use general insurance knowledge for explanations.
+- Clearly distinguish customer facts from general knowledge.
+- If required customer evidence is unavailable, say so.
+- Never expose information belonging to another customer.
+- Keep the answer concise and useful.
 """
 
-        else:
+            else:
 
-            final_prompt = f"""
+                final_prompt = f"""
 You are an insurance AI assistant.
-
-Answer the following question using only information
-available in the application context.
 
 USER QUESTION:
 {user_query}
 
-Rules:
-- Do not invent facts.
-- If evidence is unavailable, say UNKNOWN or
-  that the required data is unavailable.
-- Keep the answer concise and evidence-based.
+No customer-specific application context is currently available.
+
+Instructions:
+
+- Answer general insurance questions using your knowledge.
+- Do not invent customer-specific information.
+- Do not fabricate policies, claims, payments, interactions,
+  dates, amounts, or database values.
+- If the question requires application-specific data that is not
+  available, clearly say that the required data is unavailable.
+- Keep the answer concise and useful.
 """
 
         with st.spinner(
@@ -188,68 +305,3 @@ Rules:
 
         st.markdown("### 💡 AI Response")
         st.markdown(ai_response)
-
-if customer_360:
-
-    st.markdown("---")
-
-    st.subheader("🧠 Customer 360 Summary")
-
-    if st.button(
-        "Generate Customer Summary",
-        use_container_width=True,
-    ):
-
-        with st.spinner("Generating evidence-based summary..."):
-
-            summary_response = generate_customer_ai_summary(
-                customer_context,
-                model_name=active_model,
-            )
-
-        st.markdown(summary_response)
-
-if role == "EMPLOYEE" and customer_360:
-
-    st.markdown("---")
-
-    st.subheader("⚡ Explain a Next Best Action")
-
-    recommended_action = st.text_input(
-        "Recommended action",
-        placeholder="Example: Schedule renewal retention call",
-    )
-
-    if st.button(
-        "Explain Recommendation",
-        use_container_width=True,
-    ):
-
-        if not recommended_action.strip():
-
-            st.warning(
-                "Enter a recommended action first."
-            )
-
-        else:
-
-            with st.spinner(
-                "Analyzing recommendation evidence..."
-            ):
-
-                explanation = explain_next_best_action(
-                    customer_context=customer_context,
-                    recommended_action=recommended_action,
-                    model_name=active_model,
-                )
-
-            st.markdown("### 🔎 Recommendation Explanation")
-            st.markdown(explanation)
-
-
-if not customer_360 and role == "CUSTOMER":
-
-    st.warning(
-        "Customer context is currently unavailable. "
-        "AI responses will not invent customer information."
-    )

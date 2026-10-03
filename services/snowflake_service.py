@@ -319,10 +319,6 @@ def get_customer_actions(customer_id: str) -> pd.DataFrame:
 
 
 def get_all_action_history() -> pd.DataFrame:
-    """
-    Fetch all employee action history.
-    """
-
     try:
         conn = get_db_connection()
 
@@ -336,25 +332,18 @@ def get_all_action_history() -> pd.DataFrame:
                 CREATED_AT,
                 STATUS,
                 COMPLETED_AT
-            FROM ACTION_HISTORY
+            FROM CUSTOMER360_DB.PUBLIC.ACTION_HISTORY
             ORDER BY CREATED_AT DESC
         """
 
-        return conn.query(
-            query,
-            ttl=0
-        )
+        return conn.query(query, ttl=0)
 
     except Exception as e:
-        st.error(f"Error fetching action history: {e}")
+        st.error(f"Error fetching action history: {type(e).__name__}: {e}")
         return _empty_dataframe()
 
 
 def get_action_by_id(action_id: str) -> pd.DataFrame:
-    """
-    Fetch one action by ACTION_ID.
-    """
-
     action_id = str(action_id).strip()
 
     if not action_id:
@@ -373,35 +362,31 @@ def get_action_by_id(action_id: str) -> pd.DataFrame:
                 CREATED_AT,
                 STATUS,
                 COMPLETED_AT
-            FROM ACTION_HISTORY
+            FROM CUSTOMER360_DB.PUBLIC.ACTION_HISTORY
             WHERE ACTION_ID = ?
             LIMIT 1
         """
 
-        return conn.query(
-            query,
-            params=(action_id,),
-            ttl=0
-        )
+        return conn.query(query, params=(action_id,), ttl=0)
 
     except Exception as e:
-        st.error(f"Error fetching action: {e}")
+        st.error(f"Error fetching action: {type(e).__name__}: {e}")
         return _empty_dataframe()
 
 
 def create_action_history(
-    action_id,
-    customer_id,
-    employee_id,
-    action_type,
-    action_details,
-    status="OPEN",
-):
+    action_id: str,
+    customer_id: str,
+    employee_id: str,
+    action_type: str,
+    action_details: str,
+    status: str = "OPEN",
+) -> bool:
     try:
         conn = get_db_connection()
 
         query = """
-            INSERT INTO ACTION_HISTORY (
+            INSERT INTO CUSTOMER360_DB.PUBLIC.ACTION_HISTORY (
                 ACTION_ID,
                 CUSTOMER_ID,
                 EMPLOYEE_ID,
@@ -414,17 +399,15 @@ def create_action_history(
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), ?, NULL)
         """
 
-        session = conn.session()
-
-        session.sql(
+        conn.session().sql(
             query,
             params=[
-                str(action_id),
-                str(customer_id),
-                str(employee_id),
-                str(action_type),
-                str(action_details),
-                str(status),
+                str(action_id).strip(),
+                str(customer_id).strip().upper(),
+                str(employee_id).strip(),
+                str(action_type).strip(),
+                str(action_details).strip(),
+                str(status).strip().upper(),
             ],
         ).collect()
 
@@ -432,20 +415,12 @@ def create_action_history(
 
     except Exception as e:
         st.error(
-            f"Snowflake error while creating action: "
-            f"{type(e).__name__}: {e}"
+            f"Snowflake error while creating action: {type(e).__name__}: {e}"
         )
         return False
 
 
-def update_action_status(
-    action_id: str,
-    status: str,
-) -> bool:
-    """
-    Update action status directly through the Snowflake connector.
-    """
-
+def update_action_status(action_id: str, status: str) -> bool:
     action_id = str(action_id).strip()
     status = str(status).strip().upper()
 
@@ -453,13 +428,7 @@ def update_action_status(
         st.error("Action ID is required.")
         return False
 
-    allowed_statuses = {
-        "OPEN",
-        "IN_PROGRESS",
-        "COMPLETED",
-    }
-
-    if status not in allowed_statuses:
+    if status not in {"OPEN", "IN_PROGRESS", "COMPLETED"}:
         st.error(f"Invalid action status: {status}")
         return False
 
@@ -468,32 +437,46 @@ def update_action_status(
 
         if status == "COMPLETED":
             query = """
-                UPDATE ACTION_HISTORY
-                SET
-                    STATUS = ?,
-                    COMPLETED_AT = CURRENT_TIMESTAMP()
+                UPDATE CUSTOMER360_DB.PUBLIC.ACTION_HISTORY
+                SET STATUS = ?, COMPLETED_AT = CURRENT_TIMESTAMP()
                 WHERE ACTION_ID = ?
             """
         else:
             query = """
-                UPDATE ACTION_HISTORY
-                SET
-                    STATUS = ?,
-                    COMPLETED_AT = NULL
+                UPDATE CUSTOMER360_DB.PUBLIC.ACTION_HISTORY
+                SET STATUS = ?, COMPLETED_AT = NULL
                 WHERE ACTION_ID = ?
             """
 
-        cursor = conn.cursor()
-
-        cursor.execute(
+        conn.session().sql(
             query,
-            (
-                status,
-                action_id,
-            )
+            params=[status, action_id],
+        ).collect()
+
+        verify_query = """
+            SELECT STATUS
+            FROM CUSTOMER360_DB.PUBLIC.ACTION_HISTORY
+            WHERE ACTION_ID = ?
+        """
+
+        verify_df = conn.query(
+            verify_query,
+            params=(action_id,),
+            ttl=0,
         )
 
-        cursor.close()
+        if verify_df.empty:
+            st.error(f"Action `{action_id}` was not found in ACTION_HISTORY.")
+            return False
+
+        actual_status = str(verify_df.iloc[0]["STATUS"]).strip().upper()
+
+        if actual_status != status:
+            st.error(
+                f"Snowflake update did not persist. "
+                f"Expected `{status}`, found `{actual_status}`."
+            )
+            return False
 
         return True
 
@@ -504,48 +487,62 @@ def update_action_status(
         )
         return False
 
-
 def update_action_employee(
     action_id: str,
     employee_id: str,
 ) -> bool:
-    """
-    Assign/reassign an employee to an action.
-    """
-
     action_id = str(action_id).strip()
     employee_id = str(employee_id).strip()
 
-    if not action_id:
-        st.error("Action ID is required.")
-        return False
-
-    if not employee_id:
-        st.error("Employee ID is required.")
+    if not action_id or not employee_id:
+        st.error("Action ID and employee ID are required.")
         return False
 
     try:
         conn = get_db_connection()
 
-        query = """
-            UPDATE ACTION_HISTORY
+        update_query = """
+            UPDATE CUSTOMER360_DB.PUBLIC.ACTION_HISTORY
             SET EMPLOYEE_ID = ?
             WHERE ACTION_ID = ?
         """
 
-        conn.query(
-            query,
-            params=(
-                employee_id,
-                action_id,
-            ),
-            ttl=0
+        conn.session().sql(
+            update_query,
+            params=[employee_id, action_id],
+        ).collect()
+
+        verify_query = """
+            SELECT EMPLOYEE_ID
+            FROM CUSTOMER360_DB.PUBLIC.ACTION_HISTORY
+            WHERE ACTION_ID = ?
+        """
+
+        result = conn.query(
+            verify_query,
+            params=(action_id,),
+            ttl=0,
         )
+
+        if result.empty:
+            st.error(f"Action `{action_id}` was not found.")
+            return False
+
+        saved_employee_id = str(result.iloc[0]["EMPLOYEE_ID"]).strip()
+
+        if saved_employee_id != employee_id:
+            st.error(
+                f"Assignment did not persist. "
+                f"Expected `{employee_id}`, found `{saved_employee_id}`."
+            )
+            return False
 
         return True
 
     except Exception as e:
-        st.error(f"Error assigning employee: {e}")
+        st.error(
+            f"Snowflake error assigning employee: {type(e).__name__}: {e}"
+        )
         return False
 
 
@@ -837,6 +834,96 @@ def upsert_customer_insight(
     except Exception as e:
         st.error(
             f"Snowflake error while saving AI insight: "
+            f"{type(e).__name__}: {e}"
+        )
+        return False
+        
+def get_policy_feedback(customer_id: str, policy_id: str) -> pd.DataFrame:
+    customer_id = _normalize_customer_id(customer_id)
+
+    if not customer_id or not policy_id:
+        return _empty_dataframe()
+
+    try:
+        conn = get_db_connection()
+
+        query = """
+            SELECT
+                FEEDBACK_ID,
+                CUSTOMER_ID,
+                POLICY_ID,
+                RATING,
+                CATEGORY,
+                COMMENTS,
+                RECOMMENDATION,
+                CREATED_AT
+            FROM CUSTOMER360_DB.PUBLIC.POLICY_FEEDBACK
+            WHERE CUSTOMER_ID = ?
+              AND POLICY_ID = ?
+            ORDER BY CREATED_AT DESC
+        """
+
+        return conn.query(
+            query,
+            params=(customer_id, str(policy_id).strip()),
+            ttl=0
+        )
+
+    except Exception as e:
+        st.error(f"Error fetching policy feedback: {e}")
+        return _empty_dataframe()
+
+def create_policy_feedback(
+    customer_id: str,
+    policy_id: str,
+    rating: int,
+    category: str,
+    comments: str,
+    recommendation: str
+) -> bool:
+    try:
+        conn = get_db_connection()
+
+        feedback_id = (
+            f"FB-{customer_id}-{policy_id}-"
+            f"{pd.Timestamp.now().strftime('%Y%m%d%H%M%S%f')}"
+        )
+
+        query = """
+            INSERT INTO CUSTOMER360_DB.PUBLIC.POLICY_FEEDBACK
+            (
+                FEEDBACK_ID,
+                CUSTOMER_ID,
+                POLICY_ID,
+                RATING,
+                CATEGORY,
+                COMMENTS,
+                RECOMMENDATION,
+                CREATED_AT
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
+        """
+
+        session = conn.session()
+
+        session.sql(
+            query,
+            params=[
+                str(feedback_id),
+                str(customer_id).strip().upper(),
+                str(policy_id).strip(),
+                int(rating),
+                str(category).strip(),
+                str(comments).strip(),
+                str(recommendation).strip().upper(),
+            ],
+        ).collect()
+
+        return True
+
+    except Exception as e:
+        st.error(
+            f"Snowflake error while creating policy feedback: "
             f"{type(e).__name__}: {e}"
         )
         return False

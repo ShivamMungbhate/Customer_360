@@ -1,3 +1,5 @@
+
+
 import streamlit as st
 import pandas as pd
 
@@ -8,197 +10,50 @@ from services.snowflake_service import (
     get_all_customers,
     get_all_interactions,
     get_all_ai_insights,
-    get_customer_policies,
-    get_customer_claims,
-    get_customer_payments,
 )
-enforce_employee_boundary()
 
+enforce_employee_boundary()
 
 st.title("⚙️ System & Data Quality Health Dashboard")
 
 st.caption(
     "Live monitoring of Snowflake data, customer interactions, "
-    "AI readiness and operational data quality."
+    "AI insights and operational data quality."
 )
 
-
 system_health = get_system_health()
-
 customers_df = get_all_customers()
 interactions_df = get_all_interactions()
 ai_insights_df = get_all_ai_insights()
 
 
-
-def safe_count(dataframe):
-    if dataframe is None:
+def get_count(table_name):
+    try:
+        return int(system_health.get(table_name, 0))
+    except Exception:
         return 0
 
-    return len(dataframe)
+
+def safe_len(df):
+    if df is None:
+        return 0
+    return len(df)
 
 
-def get_count(table_name):
-    return int(system_health.get(table_name, 0))
-
-
-def safe_datetime(df, column):
-    if df.empty or column not in df.columns:
-        return pd.Series(dtype="datetime64[ns]")
-
-    return pd.to_datetime(
-        df[column],
-        errors="coerce"
-    )
-st.markdown("## 🖥️ Core System Status")
-
-
-# Snowflake connectivity
-database_status = "Healthy"
-
-if not system_health:
-    database_status = "Unavailable"
-
-
-# Customer data
 customer_count = get_count("CUSTOMERS")
-
-# Interaction data
 interaction_count = get_count("INTERACTIONS")
+ai_table_count = get_count("AI_INSIGHTS")
+nba_count = get_count("NEXT_BEST_ACTIONS")
+action_count = get_count("ACTION_HISTORY")
 
-# AI pipeline
-ai_count = get_count("AI_INSIGHTS")
-
-
-col_s1, col_s2, col_s3 = st.columns(3)
-
-col_s1.metric(
-    "Database Connection",
-    database_status,
-    "🟢 Connected" if database_status == "Healthy" else "🔴 Unavailable"
-)
-
-col_s2.metric(
-    "Customer Data",
-    f"{customer_count:,} records",
-    "Live Snowflake"
-)
-
-col_s3.metric(
-    "Interaction Data",
-    f"{interaction_count:,} records",
-    "Live Snowflake"
-)
-
-
-col_s4, col_s5, col_s6 = st.columns(3)
-
-col_s4.metric(
-    "Transcription Pipeline",
-    "Data Monitoring",
-    "Pipeline not yet enabled"
-)
-
-col_s5.metric(
-    "AI Insight Pipeline",
-    (
-        "Available"
-        if ai_count > 0
-        else "Not Available"
-    ),
-    f"{ai_count:,} insights"
-)
-
-col_s6.metric(
-    "NBA Engine",
-    f"{get_count('NEXT_BEST_ACTIONS'):,} records",
-    "Stored recommendations"
-)
-st.markdown("---")
-st.markdown("## 🗄️ Snowflake Table Health")
-
-
-table_rows = [
-    {
-        "Table": "CUSTOMERS",
-        "Rows": get_count("CUSTOMERS"),
-        "Status": "🟢 Available" if get_count("CUSTOMERS") > 0 else "⚠️ Empty",
-    },
-    {
-        "Table": "POLICIES",
-        "Rows": get_count("POLICIES"),
-        "Status": "🟢 Available" if get_count("POLICIES") > 0 else "⚠️ Empty",
-    },
-    {
-        "Table": "CLAIMS",
-        "Rows": get_count("CLAIMS"),
-        "Status": "🟢 Available" if get_count("CLAIMS") > 0 else "⚠️ Empty",
-    },
-    {
-        "Table": "PAYMENTS",
-        "Rows": get_count("PAYMENTS"),
-        "Status": "🟢 Available" if get_count("PAYMENTS") > 0 else "⚠️ Empty",
-    },
-    {
-        "Table": "INTERACTIONS",
-        "Rows": get_count("INTERACTIONS"),
-        "Status": "🟢 Available" if get_count("INTERACTIONS") > 0 else "⚠️ Empty",
-    },
-    {
-        "Table": "AI_INSIGHTS",
-        "Rows": get_count("AI_INSIGHTS"),
-        "Status": (
-            "🟢 Available"
-            if get_count("AI_INSIGHTS") > 0
-            else "⚪ Not Available"
-        ),
-    },
-    {
-        "Table": "NEXT_BEST_ACTIONS",
-        "Rows": get_count("NEXT_BEST_ACTIONS"),
-        "Status": (
-            "🟢 Available"
-            if get_count("NEXT_BEST_ACTIONS") > 0
-            else "⚪ Not Available"
-        ),
-    },
-    {
-        "Table": "ACTION_HISTORY",
-        "Rows": get_count("ACTION_HISTORY"),
-        "Status": (
-            "🟢 Available"
-            if get_count("ACTION_HISTORY") > 0
-            else "⚠️ Empty"
-        ),
-    },
-    {
-        "Table": "USERS",
-        "Rows": get_count("USERS"),
-        "Status": (
-            "🟢 Available"
-            if get_count("USERS") > 0
-            else "⚠️ Empty"
-        ),
-    },
-]
-
-
-table_health_df = pd.DataFrame(table_rows)
-
-st.dataframe(
-    table_health_df,
-    use_container_width=True,
-    hide_index=True,
-)
-
-st.markdown("---")
-st.markdown("## 🔍 Data Quality Summary")
+ai_insights_available = safe_len(ai_insights_df)
 
 missing_transcripts = 0
 available_transcripts = 0
 
 if (
-    not interactions_df.empty
+    interactions_df is not None
+    and not interactions_df.empty
     and "TRANSCRIPT" in interactions_df.columns
 ):
 
@@ -221,68 +76,299 @@ if (
 missing_customer_ids = 0
 
 if (
-    not interactions_df.empty
+    interactions_df is not None
+    and not interactions_df.empty
     and "CUSTOMER_ID" in interactions_df.columns
 ):
 
     missing_customer_ids = int(
-        interactions_df["CUSTOMER_ID"]
-        .isna()
-        .sum()
+        interactions_df["CUSTOMER_ID"].isna().sum()
     )
 
-ai_insights_available = len(
-    ai_insights_df
+
+st.markdown("## 🖥️ Core System Status")
+
+database_status = (
+    "Healthy"
+    if system_health
+    else "Unavailable"
 )
 
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Database Connection",
+        database_status,
+        "🟢 Connected"
+        if database_status == "Healthy"
+        else "🔴 Unavailable"
+    )
+
+with col2:
+    st.metric(
+        "Customer Data",
+        f"{customer_count:,} records",
+        "Live Snowflake"
+    )
+
+with col3:
+    st.metric(
+        "Interaction Data",
+        f"{interaction_count:,} records",
+        "Live Snowflake"
+    )
+
+
+col4, col5, col6 = st.columns(3)
+
+with col4:
+    st.metric(
+        "Transcripts",
+        f"{available_transcripts:,}",
+        f"{missing_transcripts:,} missing"
+    )
+
+with col5:
+
+    if ai_insights_available > 0:
+
+        st.metric(
+            "AI Insight Pipeline",
+            "WORKING",
+            f"{ai_insights_available:,} insights"
+        )
+
+    elif ai_table_count > 0:
+
+        st.metric(
+            "AI Insight Pipeline",
+            "DATA AVAILABLE",
+            f"{ai_table_count:,} records"
+        )
+
+    else:
+
+        st.metric(
+            "AI Insight Pipeline",
+            "NO INSIGHTS",
+            "0 stored records"
+        )
+
+with col6:
+    st.metric(
+        "NBA Engine",
+        f"{nba_count:,} records",
+        "Stored recommendations"
+    )
+
+
+st.markdown("---")
+
+st.markdown("## 🤖 AI Insights")
+
+if ai_insights_df is None:
+
+    st.error(
+        "The AI_INSIGHTS query returned no dataframe."
+    )
+
+elif ai_insights_df.empty:
+
+    st.warning(
+        "AI_INSIGHTS currently contains no stored insight records."
+    )
+
+    st.info(
+        "The dashboard is connected to the AI_INSIGHTS table, "
+        "but no generated insights have been stored yet."
+    )
+
+else:
+
+    st.success(
+        f"🟢 AI Insights are working. "
+        f"{len(ai_insights_df):,} insight record(s) are available."
+    )
+
+    st.markdown("### Stored AI Insights")
+
+    st.dataframe(
+        ai_insights_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.markdown("### AI Insight Columns")
+
+    insight_columns = pd.DataFrame(
+        {
+            "Column": ai_insights_df.columns.tolist(),
+            "Non-Null Values": [
+                int(ai_insights_df[column].notna().sum())
+                for column in ai_insights_df.columns
+            ],
+        }
+    )
+
+    st.dataframe(
+        insight_columns,
+        use_container_width=True,
+        hide_index=True
+    )
+
+
+st.markdown("---")
+
+st.markdown("## 🗄️ Snowflake Table Health")
+
+table_rows = [
+    {
+        "Table": "CUSTOMERS",
+        "Rows": customer_count,
+        "Status": (
+            "🟢 Available"
+            if customer_count > 0
+            else "⚠️ Empty"
+        ),
+    },
+    {
+        "Table": "POLICIES",
+        "Rows": get_count("POLICIES"),
+        "Status": (
+            "🟢 Available"
+            if get_count("POLICIES") > 0
+            else "⚠️ Empty"
+        ),
+    },
+    {
+        "Table": "CLAIMS",
+        "Rows": get_count("CLAIMS"),
+        "Status": (
+            "🟢 Available"
+            if get_count("CLAIMS") > 0
+            else "⚠️ Empty"
+        ),
+    },
+    {
+        "Table": "PAYMENTS",
+        "Rows": get_count("PAYMENTS"),
+        "Status": (
+            "🟢 Available"
+            if get_count("PAYMENTS") > 0
+            else "⚠️ Empty"
+        ),
+    },
+    {
+        "Table": "INTERACTIONS",
+        "Rows": interaction_count,
+        "Status": (
+            "🟢 Available"
+            if interaction_count > 0
+            else "⚠️ Empty"
+        ),
+    },
+    {
+        "Table": "AI_INSIGHTS",
+        "Rows": ai_table_count,
+        "Status": (
+            "🟢 Available"
+            if ai_table_count > 0
+            else "⚪ No Records"
+        ),
+    },
+    {
+        "Table": "NEXT_BEST_ACTIONS",
+        "Rows": nba_count,
+        "Status": (
+            "🟢 Available"
+            if nba_count > 0
+            else "⚪ No Records"
+        ),
+    },
+    {
+        "Table": "ACTION_HISTORY",
+        "Rows": action_count,
+        "Status": (
+            "🟢 Available"
+            if action_count > 0
+            else "⚪ Empty"
+        ),
+    },
+    {
+        "Table": "USERS",
+        "Rows": get_count("USERS"),
+        "Status": (
+            "🟢 Available"
+            if get_count("USERS") > 0
+            else "⚠️ Empty"
+        ),
+    },
+]
+
+table_health_df = pd.DataFrame(table_rows)
+
+st.dataframe(
+    table_health_df,
+    use_container_width=True,
+    hide_index=True
+)
+
+
+st.markdown("---")
+
+st.markdown("## 🔍 Data Quality Summary")
 
 col1, col2, col3, col4 = st.columns(4)
 
-col1.metric(
-    "📝 Transcripts Available",
-    available_transcripts
-)
+with col1:
+    st.metric(
+        "📝 Transcripts Available",
+        available_transcripts
+    )
 
-col2.metric(
-    "⚠️ Missing Transcripts",
-    missing_transcripts
-)
+with col2:
+    st.metric(
+        "⚠️ Missing Transcripts",
+        missing_transcripts
+    )
 
-col3.metric(
-    "🤖 AI Insights",
-    ai_insights_available
-)
+with col3:
+    st.metric(
+        "🤖 AI Insights",
+        ai_insights_available
+    )
 
-col4.metric(
-    "❓ Missing Interaction IDs",
-    missing_customer_ids
-)
+with col4:
+    st.metric(
+        "❓ Missing Customer IDs",
+        missing_customer_ids
+    )
+
 
 st.markdown("---")
-st.markdown("## 📝 Transcript Quality")
 
+st.markdown("## 📝 Transcript Quality")
 
 if missing_transcripts > 0:
 
     st.warning(
-        f"{missing_transcripts} interaction records "
+        f"{missing_transcripts} interaction record(s) "
         "do not currently contain a transcript."
     )
 
     missing_df = interactions_df.copy()
 
-    if "TRANSCRIPT" in missing_df.columns:
+    transcript_values = (
+        missing_df["TRANSCRIPT"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
 
-        transcript_values = (
-            missing_df["TRANSCRIPT"]
-            .fillna("")
-            .astype(str)
-            .str.strip()
-        )
-
-        missing_df = missing_df[
-            transcript_values == ""
-        ].copy()
+    missing_df = missing_df[
+        transcript_values == ""
+    ].copy()
 
     display_columns = [
         column
@@ -297,22 +383,22 @@ if missing_transcripts > 0:
     ]
 
     if display_columns:
-
         st.dataframe(
             missing_df[display_columns],
             use_container_width=True,
-            hide_index=True,
+            hide_index=True
         )
 
 else:
 
     st.success(
-        "✅ No missing transcripts detected in the current interaction dataset."
+        "✅ No missing transcripts detected."
     )
 
-st.markdown("---")
-st.markdown("## 💬 Interaction Data Inspection")
 
+st.markdown("---")
+
+st.markdown("## 💬 Interaction Data Inspection")
 
 if interactions_df.empty:
 
@@ -336,7 +422,7 @@ else:
 
     selected_type = st.selectbox(
         "Filter by interaction type",
-        ["All"] + interaction_types,
+        ["All"] + interaction_types
     )
 
     filtered_interactions = interactions_df.copy()
@@ -353,7 +439,8 @@ else:
         ]
 
     st.write(
-        f"Showing **{len(filtered_interactions):,}** interaction records."
+        f"Showing **{len(filtered_interactions):,}** "
+        "interaction records."
     )
 
     display_columns = [
@@ -371,89 +458,72 @@ else:
     st.dataframe(
         filtered_interactions[display_columns],
         use_container_width=True,
-        hide_index=True,
+        hide_index=True
     )
+
 
 st.markdown("---")
+
 st.markdown("## 🤖 AI Pipeline Status")
 
+ai_pipeline_rows = [
+    {
+        "Pipeline": "Snowflake Connection",
+        "Status": (
+            "🟢 Healthy"
+            if system_health
+            else "🔴 Unavailable"
+        ),
+        "Evidence": "Snowflake system health query",
+    },
+    {
+        "Pipeline": "Transcript Data",
+        "Status": (
+            "🟢 Available"
+            if available_transcripts > 0
+            else "⚪ No Data"
+        ),
+        "Evidence": (
+            f"{available_transcripts:,} transcripts"
+        ),
+    },
+    {
+        "Pipeline": "AI Insight Storage",
+        "Status": (
+            "🟢 Working"
+            if ai_insights_available > 0
+            else "⚪ No Stored Insights"
+        ),
+        "Evidence": (
+            f"{ai_insights_available:,} records returned "
+            "from AI_INSIGHTS"
+        ),
+    },
+    {
+        "Pipeline": "Next Best Action",
+        "Status": (
+            "🟢 Available"
+            if nba_count > 0
+            else "⚪ No Stored Records"
+        ),
+        "Evidence": (
+            f"{nba_count:,} NBA records"
+        ),
+    },
+]
 
-if ai_insights_df.empty:
-
-    st.info(
-        "AI_INSIGHTS is currently unavailable. "
-        "Transcript-to-AI insight processing has not yet been "
-        "enabled in the active Snowflake pipeline."
-    )
-
-    ai_status_df = pd.DataFrame(
-        [
-            {
-                "Pipeline": "Transcript Processing",
-                "Status": "Not Enabled",
-                "Evidence": f"{available_transcripts:,} transcripts available",
-            },
-            {
-                "Pipeline": "AI Insight Generation",
-                "Status": "Not Available",
-                "Evidence": "AI_INSIGHTS has no available records",
-            },
-            {
-                "Pipeline": "Next Best Action",
-                "Status": (
-                    "Available"
-                    if get_count("NEXT_BEST_ACTIONS") > 0
-                    else "No Stored Records"
-                ),
-                "Evidence": (
-                    f"{get_count('NEXT_BEST_ACTIONS'):,} NBA records"
-                ),
-            },
-        ]
-    )
-
-else:
-
-    ai_status_df = pd.DataFrame(
-        [
-            {
-                "Pipeline": "Transcript Processing",
-                "Status": "Data Available",
-                "Evidence": f"{available_transcripts:,} transcripts",
-            },
-            {
-                "Pipeline": "AI Insight Generation",
-                "Status": "Available",
-                "Evidence": f"{ai_insights_available:,} AI insights",
-            },
-            {
-                "Pipeline": "Next Best Action",
-                "Status": (
-                    "Available"
-                    if get_count("NEXT_BEST_ACTIONS") > 0
-                    else "No Stored Records"
-                ),
-                "Evidence": (
-                    f"{get_count('NEXT_BEST_ACTIONS'):,} NBA records"
-                ),
-            },
-        ]
-    )
-
+ai_status_df = pd.DataFrame(ai_pipeline_rows)
 
 st.dataframe(
     ai_status_df,
     use_container_width=True,
-    hide_index=True,
+    hide_index=True
 )
+
 
 st.markdown("---")
+
 st.markdown("## 📋 Action Execution Health")
-
-
-action_count = get_count(
-    "ACTION_HISTORY"
-)
 
 if action_count > 0:
 
@@ -469,8 +539,8 @@ else:
 
 
 st.markdown("---")
-st.markdown("## 📊 Database Snapshot")
 
+st.markdown("## 📊 Database Snapshot")
 
 snapshot_df = pd.DataFrame(
     [
@@ -482,14 +552,16 @@ snapshot_df = pd.DataFrame(
     ]
 )
 
-st.bar_chart(
-    snapshot_df.set_index("Dataset")
-)
+if not snapshot_df.empty:
+
+    st.bar_chart(
+        snapshot_df.set_index("Dataset")
+    )
 
 
 st.markdown("---")
-st.markdown("## 🔎 Customer Data Inspection")
 
+st.markdown("## 🔎 Customer Data Inspection")
 
 if customers_df.empty:
 
@@ -499,21 +571,25 @@ if customers_df.empty:
 
 else:
 
-    customer_options = (
-        customers_df["CUSTOMER_ID"]
-        .dropna()
-        .astype(str)
-        .sort_values()
-        .tolist()
-        if "CUSTOMER_ID" in customers_df.columns
-        else []
-    )
+    if "CUSTOMER_ID" in customers_df.columns:
+
+        customer_options = (
+            customers_df["CUSTOMER_ID"]
+            .dropna()
+            .astype(str)
+            .sort_values()
+            .tolist()
+        )
+
+    else:
+
+        customer_options = []
 
     if customer_options:
 
         selected_customer = st.selectbox(
             "Select Customer",
-            customer_options,
+            customer_options
         )
 
         selected_customer_df = customers_df[
@@ -527,12 +603,12 @@ else:
             st.dataframe(
                 selected_customer_df,
                 use_container_width=True,
-                hide_index=True,
+                hide_index=True
             )
 
             if st.button(
                 "🔍 Open Customer 360",
-                use_container_width=True,
+                use_container_width=True
             ):
 
                 st.session_state[
@@ -543,9 +619,10 @@ else:
                     "pages/customer_360.py"
                 )
 
-st.markdown("---")
-st.markdown("## ✅ System Summary")
 
+st.markdown("---")
+
+st.markdown("## ✅ System Summary")
 
 summary_items = []
 
@@ -558,7 +635,6 @@ else:
         "🔴 Customer data is unavailable."
     )
 
-
 if interaction_count > 0:
     summary_items.append(
         "🟢 Interaction data is available."
@@ -567,7 +643,6 @@ else:
     summary_items.append(
         "⚠️ No interaction records are available."
     )
-
 
 if missing_transcripts > 0:
     summary_items.append(
@@ -579,18 +654,17 @@ else:
         "🟢 No missing transcripts detected."
     )
 
-
-if ai_count > 0:
+if ai_insights_available > 0:
     summary_items.append(
-        "🟢 AI insight records are available."
+        f"🟢 AI Insights are working with "
+        f"{ai_insights_available:,} stored insight records."
     )
 else:
     summary_items.append(
-        "⚪ AI_INSIGHTS is not yet active."
+        "⚪ No AI insight records are currently stored."
     )
 
-
-if get_count("ACTION_HISTORY") > 0:
+if action_count > 0:
     summary_items.append(
         "🟢 Action execution history is available."
     )
@@ -599,14 +673,10 @@ else:
         "⚪ No action history records found."
     )
 
-
 for item in summary_items:
     st.write(item)
 
-
 st.caption(
     "All displayed database counts and quality indicators are "
-    "derived from the current Snowflake environment. "
-    "Unavailable pipelines are explicitly shown as unavailable "
-    "rather than represented with simulated health metrics."
+    "derived from the current Snowflake environment."
 )

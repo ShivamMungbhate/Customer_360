@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 
@@ -88,9 +89,6 @@ if filtered_customers.empty:
     st.stop()
 
 
-# ============================================================
-# CUSTOMER OPTIONS
-# ============================================================
 
 customer_options = []
 
@@ -200,9 +198,7 @@ with st.spinner("Loading customer data..."):
 
 ai_insights_df = get_ai_insights(customer_id)
 
-# Build a compact evidence context for the optional "Why this action?"
-# explanation. The explanation uses the same live customer data and
-# stored Cortex insights already loaded on this page.
+
 customer_context_parts = [
     f"Customer ID: {customer_id}",
     f"Customer name: {customer_name}",
@@ -587,12 +583,7 @@ if (
 
             })
 
-# ============================================================
-# AI-AWARE NEXT BEST ACTIONS
-# ============================================================
-# Use the stored Cortex insights as an additional decision signal.
-# The existing customer/policy/claim/payment rules remain in place;
-# these AI-aware recommendations add context from CUSTOMER_INSIGHTS.
+
 
 if not ai_insights_df.empty:
     insight = ai_insights_df.iloc[0]
@@ -791,6 +782,22 @@ else:
                     ]
                 )
 
+            if st.button(
+                "➕ Select for Action History",
+                key=f"select_nba_{customer_id}_{index}",
+                use_container_width=True,
+            ):
+                st.session_state["selected_nba"] = {
+                    "customer_id": str(customer_id).strip().upper(),
+                    "action": recommendation["ACTION"],
+                    "reason": recommendation["REASON"],
+                    "priority": recommendation["PRIORITY"],
+                }
+                st.success(
+                    "Recommendation selected. Open Action History "
+                    "and click Create Action."
+                )
+
             st.markdown("#### 💡 Why this action?")
 
             if st.button(
@@ -929,9 +936,4 @@ else:
             hide_index=True,
         )
 
-st.subheader("📌 Action Execution")
 
-st.info(
-    "Action creation and ACTION_HISTORY persistence "
-    "will be enabled in the action-management phase."
-)
