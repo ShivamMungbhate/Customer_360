@@ -14,6 +14,543 @@ from services.snowflake_service import (
 from services.ai_service import process_transcript_to_insights
 enforce_employee_boundary()
 
+st.markdown("""
+<style>
+
+    /* =====================================================
+       ROOT / GLOBAL
+       ===================================================== */
+
+    html, body, [data-testid="stAppViewContainer"] {
+        background:
+            radial-gradient(
+                circle at 85% 5%,
+                rgba(37, 99, 235, 0.14),
+                transparent 28%
+            ),
+            radial-gradient(
+                circle at 10% 25%,
+                rgba(20, 184, 166, 0.09),
+                transparent 25%
+            ),
+            #07111f !important;
+    }
+
+    [data-testid="stAppViewContainer"] {
+        color: #e5edf7 !important;
+    }
+
+    [data-testid="stHeader"] {
+        background: transparent !important;
+    }
+
+    [data-testid="stToolbar"] {
+        background: transparent !important;
+    }
+
+
+    /* =====================================================
+       MAIN CONTENT
+       ===================================================== */
+
+    .block-container {
+        max-width: 1450px !important;
+        padding-top: 2rem !important;
+        padding-bottom: 4rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+
+
+    /* =====================================================
+       HEADINGS
+       ===================================================== */
+
+    h1, h2, h3, h4, h5 {
+        color: #f8fafc !important;
+        letter-spacing: -0.02em !important;
+    }
+
+    h1 {
+        font-size: 2.2rem !important;
+        font-weight: 800 !important;
+
+        background:
+            linear-gradient(
+                90deg,
+                #ffffff 0%,
+                #dbeafe 45%,
+                #67e8f9 100%
+            );
+
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+        font-size: 1.55rem !important;
+        font-weight: 750 !important;
+        margin-top: 1rem !important;
+    }
+
+    h3 {
+        font-size: 1.25rem !important;
+        font-weight: 700 !important;
+    }
+
+    h4 {
+        font-size: 1.05rem !important;
+    }
+
+    p {
+        color: #aebed0 !important;
+    }
+
+    label {
+        color: #aebed0 !important;
+    }
+
+    [data-testid="stCaptionContainer"] {
+        color: #8195aa !important;
+    }
+
+
+    /* =====================================================
+       METRIC CARDS
+       ===================================================== */
+
+    [data-testid="stMetric"] {
+        background:
+            linear-gradient(
+                145deg,
+                rgba(15, 31, 52, 0.97),
+                rgba(8, 22, 38, 0.97)
+            ) !important;
+
+        border: 1px solid
+            rgba(71, 102, 138, 0.34) !important;
+
+        border-radius: 16px !important;
+
+        padding: 18px 20px !important;
+
+        min-height: 105px !important;
+
+        box-shadow:
+            0 10px 30px rgba(0, 0, 0, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            box-shadow 0.2s ease !important;
+    }
+
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-3px) !important;
+
+        border-color:
+            rgba(45, 212, 191, 0.60) !important;
+
+        box-shadow:
+            0 15px 35px rgba(0, 0, 0, 0.32),
+            0 0 22px rgba(20, 184, 166, 0.10) !important;
+    }
+
+    [data-testid="stMetricLabel"] {
+        color: #8fa4bb !important;
+        font-size: 0.82rem !important;
+        font-weight: 650 !important;
+    }
+
+    [data-testid="stMetricValue"] {
+        color: #f8fafc !important;
+        font-size: 1.65rem !important;
+        font-weight: 800 !important;
+    }
+
+
+    /* =====================================================
+       DIVIDERS
+       ===================================================== */
+
+    hr {
+        border: 0 !important;
+        height: 1px !important;
+
+        background:
+            linear-gradient(
+                90deg,
+                transparent,
+                rgba(71, 102, 138, 0.55),
+                transparent
+            ) !important;
+
+        margin: 30px 0 !important;
+    }
+
+
+    /* =====================================================
+       TEXT INPUTS
+       ===================================================== */
+
+    div[data-baseweb="input"] {
+        background:
+            rgba(11, 27, 45, 0.95) !important;
+
+        border: 1px solid
+            rgba(71, 102, 138, 0.45) !important;
+
+        border-radius: 10px !important;
+
+        box-shadow: none !important;
+
+        transition:
+            border-color 0.2s ease,
+            box-shadow 0.2s ease !important;
+    }
+
+    div[data-baseweb="input"]:focus-within {
+        border-color:
+            rgba(45, 212, 191, 0.75) !important;
+
+        box-shadow:
+            0 0 0 2px rgba(20, 184, 166, 0.10) !important;
+    }
+
+    div[data-baseweb="input"] input {
+        color: #e5edf7 !important;
+        background: transparent !important;
+    }
+
+    div[data-baseweb="input"] input::placeholder {
+        color: #64748b !important;
+    }
+
+
+    /* =====================================================
+       TEXT AREA
+       ===================================================== */
+
+    textarea {
+        background:
+            rgba(11, 27, 45, 0.95) !important;
+
+        color: #e5edf7 !important;
+
+        border: 1px solid
+            rgba(71, 102, 138, 0.45) !important;
+
+        border-radius: 10px !important;
+    }
+
+    textarea:focus {
+        border-color:
+            rgba(45, 212, 191, 0.75) !important;
+
+        box-shadow:
+            0 0 0 2px rgba(20, 184, 166, 0.10) !important;
+    }
+
+
+    /* =====================================================
+       INTERACTION CARDS
+       ===================================================== */
+
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background:
+            linear-gradient(
+                145deg,
+                rgba(15, 31, 52, 0.96),
+                rgba(8, 22, 38, 0.96)
+            ) !important;
+
+        border: 1px solid
+            rgba(71, 102, 138, 0.32) !important;
+
+        border-radius: 16px !important;
+
+        box-shadow:
+            0 10px 28px rgba(0, 0, 0, 0.22) !important;
+
+        padding: 6px !important;
+
+        margin-bottom: 16px !important;
+
+        transition:
+            border-color 0.2s ease,
+            transform 0.2s ease,
+            box-shadow 0.2s ease !important;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color:
+            rgba(45, 212, 191, 0.42) !important;
+
+        transform: translateY(-1px) !important;
+
+        box-shadow:
+            0 15px 35px rgba(0, 0, 0, 0.30),
+            0 0 22px rgba(20, 184, 166, 0.06) !important;
+    }
+
+
+    /* =====================================================
+       BUTTONS
+       ===================================================== */
+
+    .stButton > button {
+        width: 100% !important;
+
+        min-height: 42px !important;
+
+        background:
+            linear-gradient(
+                135deg,
+                #0f766e 0%,
+                #0891b2 100%
+            ) !important;
+
+        color: #ffffff !important;
+
+        border: 1px solid
+            rgba(103, 232, 249, 0.22) !important;
+
+        border-radius: 9px !important;
+
+        font-weight: 700 !important;
+
+        box-shadow:
+            0 7px 18px rgba(8, 145, 178, 0.18) !important;
+
+        transition:
+            transform 0.18s ease,
+            box-shadow 0.18s ease,
+            filter 0.18s ease !important;
+    }
+
+    .stButton > button:hover {
+        color: #ffffff !important;
+
+        filter: brightness(1.10) !important;
+
+        transform: translateY(-1px) !important;
+
+        box-shadow:
+            0 11px 26px rgba(8, 145, 178, 0.28) !important;
+    }
+
+    .stButton > button:active {
+        transform: translateY(0) !important;
+    }
+
+
+    /* =====================================================
+       EXPANDERS
+       ===================================================== */
+
+    [data-testid="stExpander"] {
+        background:
+            rgba(10, 28, 47, 0.92) !important;
+
+        border: 1px solid
+            rgba(71, 102, 138, 0.35) !important;
+
+        border-radius: 12px !important;
+
+        overflow: hidden !important;
+
+        margin-top: 10px !important;
+    }
+
+    [data-testid="stExpander"]:hover {
+        border-color:
+            rgba(45, 212, 191, 0.45) !important;
+    }
+
+    [data-testid="stExpander"] summary {
+        color: #dce8f5 !important;
+        font-weight: 650 !important;
+    }
+
+
+    /* =====================================================
+       SELECTBOX
+       ===================================================== */
+
+    div[data-baseweb="select"] > div {
+        background:
+            rgba(11, 27, 45, 0.95) !important;
+
+        border: 1px solid
+            rgba(71, 102, 138, 0.45) !important;
+
+        border-radius: 10px !important;
+    }
+
+    div[data-baseweb="select"] span {
+        color: #dbeafe !important;
+    }
+
+
+    /* =====================================================
+       PROGRESS BAR
+       ===================================================== */
+
+    [data-testid="stProgress"] {
+        margin-top: 10px !important;
+    }
+
+    [data-testid="stProgress"] > div {
+        background:
+            rgba(51, 65, 85, 0.55) !important;
+
+        border-radius: 999px !important;
+    }
+
+    [data-testid="stProgress"] [role="progressbar"] {
+        background:
+            linear-gradient(
+                90deg,
+                #0f766e,
+                #06b6d4,
+                #67e8f9
+            ) !important;
+
+        border-radius: 999px !important;
+    }
+
+
+    /* =====================================================
+       ALERTS
+       ===================================================== */
+
+    [data-testid="stAlert"] {
+        border-radius: 12px !important;
+
+        border: 1px solid
+            rgba(71, 102, 138, 0.32) !important;
+
+        background:
+            rgba(12, 29, 48, 0.94) !important;
+    }
+
+    [data-testid="stAlert"] p {
+        color: #d8e5f2 !important;
+    }
+
+
+    /* =====================================================
+       DATAFRAME
+       ===================================================== */
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid
+            rgba(71, 102, 138, 0.32) !important;
+
+        border-radius: 12px !important;
+
+        overflow: hidden !important;
+
+        box-shadow:
+            0 8px 25px rgba(0, 0, 0, 0.20) !important;
+    }
+
+
+    /* =====================================================
+       CODE / CUSTOMER IDS
+       ===================================================== */
+
+    code {
+        color: #67e8f9 !important;
+
+        background:
+            rgba(8, 47, 73, 0.60) !important;
+
+        border: 1px solid
+            rgba(34, 211, 238, 0.15) !important;
+
+        border-radius: 6px !important;
+
+        padding: 2px 7px !important;
+    }
+
+
+    /* =====================================================
+       SPINNER
+       ===================================================== */
+
+    [data-testid="stSpinner"] {
+        color: #67e8f9 !important;
+    }
+
+
+    /* =====================================================
+       SIDEBAR
+       ===================================================== */
+
+    [data-testid="stSidebar"] {
+        background:
+            linear-gradient(
+                180deg,
+                #081525 0%,
+                #06101d 100%
+            ) !important;
+
+        border-right:
+            1px solid rgba(71, 102, 138, 0.25) !important;
+    }
+
+
+    /* =====================================================
+       SCROLLBAR
+       ===================================================== */
+
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #07111f;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #263b52;
+        border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #36536f;
+    }
+
+
+    /* =====================================================
+       MOBILE
+       ===================================================== */
+
+    @media (max-width: 900px) {
+
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+
+        h1 {
+            font-size: 1.75rem !important;
+        }
+
+        [data-testid="stMetric"] {
+            min-height: 90px !important;
+            padding: 14px !important;
+        }
+
+    }
+
+</style>
+""", unsafe_allow_html=True)
+
+
 st.title("💬 Interactions & AI Insights")
 
 st.write(

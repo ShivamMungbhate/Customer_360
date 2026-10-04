@@ -12,6 +12,290 @@ from services.snowflake_service import (
 )
 
 enforce_employee_boundary()
+st.markdown("""
+<style>
+
+/* Import modern font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Global theme */
+.stApp {
+    background:
+        radial-gradient(ellipse at 10% 0%, rgba(37, 99, 235, 0.16), transparent 40%),
+        radial-gradient(ellipse at 90% 10%, rgba(124, 58, 237, 0.12), transparent 35%),
+        #080d1a;
+    color: #e5eaf5;
+    font-family: 'Inter', sans-serif;
+}
+
+[data-testid="stHeader"] {
+    background: rgba(8, 13, 26, 0.75);
+}
+
+[data-testid="stMainBlockContainer"] {
+    padding-top: 2.4rem;
+    padding-bottom: 3rem;
+    max-width: 1500px;
+}
+
+/* Main headings */
+h1 {
+    font-size: clamp(1.8rem, 3vw, 2.6rem) !important;
+    font-weight: 800 !important;
+    letter-spacing: -1.2px;
+    line-height: 1.3 !important;
+    color: #f8fafc !important;
+    background: linear-gradient(100deg, #ffffff 15%, #93c5fd 60%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding-bottom: 8px;
+}
+
+h2, h3 {
+    color: #f1f5f9 !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.4px;
+}
+
+h4, h5, h6 {
+    color: #dbeafe !important;
+}
+
+p, label, li {
+    color: #cbd5e1;
+}
+
+[data-testid="stCaptionContainer"] {
+    color: #94a3b8;
+    font-size: 0.82rem;
+}
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: linear-gradient(
+        145deg,
+        rgba(23, 35, 60, 0.96),
+        rgba(15, 23, 42, 0.96)
+    );
+    border: 1px solid rgba(96, 165, 250, 0.22);
+    border-radius: 18px;
+    padding: 22px 20px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.16);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-3px);
+    border-color: rgba(96, 165, 250, 0.65);
+}
+
+[data-testid="stMetricLabel"] {
+    color: #a5b4fc !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+[data-testid="stMetricValue"] {
+    color: #f8fafc !important;
+    font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+    font-weight: 800;
+}
+
+/* Action record bordered containers */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(
+        145deg,
+        rgba(17, 27, 48, 0.96),
+        rgba(12, 19, 35, 0.96)
+    );
+    border: 1px solid rgba(71, 85, 105, 0.55) !important;
+    border-radius: 18px !important;
+    padding: 18px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    border-color: rgba(96, 165, 250, 0.48) !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Primary and secondary buttons */
+.stButton > button {
+    background: linear-gradient(110deg, #2563eb, #4f46e5);
+    color: #ffffff !important;
+    border: 1px solid rgba(147, 197, 253, 0.25);
+    border-radius: 11px;
+    padding: 0.62rem 1rem;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    min-height: 42px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18);
+    transition: all 0.2s ease;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(110deg, #3b82f6, #6366f1);
+    border-color: #93c5fd;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
+}
+
+.stButton > button:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 3px;
+}
+
+.stButton > button:active {
+    transform: scale(0.98);
+}
+
+/* Text inputs and dropdowns */
+.stTextInput input,
+.stTextArea textarea,
+.stNumberInput input {
+    background: #111b30 !important;
+    color: #f1f5f9 !important;
+    border: 1px solid #334155 !important;
+    border-radius: 10px !important;
+    min-height: 42px;
+}
+
+.stTextInput input:focus,
+.stTextArea textarea:focus,
+.stNumberInput input:focus {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.16) !important;
+}
+
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: #64748b !important;
+}
+
+/* Select boxes */
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+    background: #111b30;
+    border-color: #334155;
+    border-radius: 10px;
+    color: #e2e8f0;
+}
+
+[data-baseweb="popover"],
+[data-baseweb="menu"] {
+    background: #111b30;
+    border: 1px solid #334155;
+    border-radius: 10px;
+}
+
+[data-baseweb="menu"] * {
+    color: #e2e8f0;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #101a30 0%, #0b1120 100%);
+    border-right: 1px solid rgba(96, 165, 250, 0.18);
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    background: transparent;
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #f8fafc !important;
+}
+
+/* Success, info, warning and error messages */
+[data-testid="stAlert"] {
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 12px 16px;
+}
+
+/* Code blocks and customer IDs */
+[data-testid="stCode"] {
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+code {
+    color: #93c5fd !important;
+}
+
+/* Expanders */
+[data-testid="stExpander"] {
+    background: rgba(17, 27, 48, 0.7);
+    border: 1px solid #334155;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+[data-testid="stExpander"] summary {
+    color: #e2e8f0;
+    font-weight: 600;
+}
+
+[data-testid="stExpander"] summary:hover {
+    color: #93c5fd;
+}
+
+/* Data table */
+[data-testid="stDataFrame"] {
+    border: 1px solid #334155;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Dividers */
+hr {
+    border-color: rgba(100, 116, 139, 0.28) !important;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Workflow columns and general spacing */
+[data-testid="stHorizontalBlock"] {
+    gap: 1rem;
+}
+
+/* Responsive layout */
+@media (max-width: 768px) {
+    [data-testid="stMainBlockContainer"] {
+        padding: 1.2rem 1rem 2rem;
+    }
+
+    [data-testid="stMetric"] {
+        padding: 14px 12px;
+        border-radius: 13px;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 12px;
+        border-radius: 14px !important;
+    }
+
+    h1 {
+        letter-spacing: -0.6px;
+    }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 st.title("📋 Employee Action History & Execution Tracker")
 

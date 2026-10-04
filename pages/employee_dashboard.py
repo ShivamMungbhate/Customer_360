@@ -13,6 +13,272 @@ from services.snowflake_service import (
 )
 enforce_employee_boundary()
 
+st.markdown("""
+<style>
+
+    /* Main application background */
+    .stApp {
+        background:
+            radial-gradient(
+                circle at 15% 10%,
+                rgba(37, 99, 235, 0.16),
+                transparent 28%
+            ),
+            radial-gradient(
+                circle at 85% 20%,
+                rgba(14, 165, 233, 0.10),
+                transparent 25%
+            ),
+            linear-gradient(
+                135deg,
+                #07111f 0%,
+                #0b1728 45%,
+                #0f1f33 100%
+            );
+
+        color: #e5e7eb;
+    }
+
+
+    /* Main content area */
+    .main .block-container {
+        max-width: 1400px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background:
+            linear-gradient(
+                180deg,
+                #07111f 0%,
+                #0b1728 100%
+            );
+
+        border-right: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+
+    /* Headings */
+    h1, h2, h3, h4, h5 {
+        color: #f8fafc !important;
+        font-weight: 700;
+    }
+
+
+    /* Normal text */
+    p, label, span {
+        color: #d1d5db;
+    }
+
+
+    /* Caption */
+    .stCaption,
+    [data-testid="stCaptionContainer"] {
+        color: #94a3b8 !important;
+    }
+
+
+    /* Metric cards */
+    [data-testid="stMetric"] {
+        background:
+            linear-gradient(
+                145deg,
+                rgba(30, 41, 59, 0.95),
+                rgba(15, 31, 51, 0.95)
+            );
+
+        border: 1px solid rgba(96, 165, 250, 0.18);
+        border-radius: 14px;
+        padding: 18px;
+
+        box-shadow:
+            0 8px 25px rgba(0, 0, 0, 0.25);
+
+        transition: all 0.2s ease;
+    }
+
+
+    [data-testid="stMetric"]:hover {
+        border-color: rgba(59, 130, 246, 0.45);
+
+        box-shadow:
+            0 10px 30px rgba(37, 99, 235, 0.15);
+    }
+
+
+    [data-testid="stMetricLabel"] {
+        color: #94a3b8 !important;
+    }
+
+
+    [data-testid="stMetricValue"] {
+        color: #f8fafc !important;
+        font-weight: 700;
+    }
+
+
+    /* Containers / cards */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background:
+            rgba(15, 31, 51, 0.78);
+
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 14px;
+
+        box-shadow:
+            0 8px 24px rgba(0, 0, 0, 0.20);
+    }
+
+
+    /* Buttons */
+    .stButton > button {
+        background:
+            linear-gradient(
+                135deg,
+                #2563eb,
+                #1d4ed8
+            );
+
+        color: white !important;
+
+        border: 1px solid rgba(96, 165, 250, 0.35);
+        border-radius: 9px;
+
+        font-weight: 600;
+
+        min-height: 42px;
+
+        transition:
+            transform 0.15s ease,
+            box-shadow 0.15s ease,
+            background 0.15s ease;
+    }
+
+
+    .stButton > button:hover {
+        background:
+            linear-gradient(
+                135deg,
+                #3b82f6,
+                #2563eb
+            );
+
+        color: white !important;
+
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 6px 18px rgba(37, 99, 235, 0.30);
+    }
+
+
+    /* Text inputs */
+    div[data-baseweb="input"] {
+        background-color: #111f33 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 9px !important;
+    }
+
+
+    div[data-baseweb="input"]:focus-within {
+        border-color: #3b82f6 !important;
+        box-shadow:
+            0 0 0 1px #3b82f6 !important;
+    }
+
+
+    input {
+        color: #f8fafc !important;
+        background-color: transparent !important;
+    }
+
+
+    input::placeholder {
+        color: #64748b !important;
+    }
+
+
+    /* Select boxes */
+    div[data-baseweb="select"] > div {
+        background-color: #111f33 !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+        border-radius: 9px !important;
+    }
+
+
+    /* Dataframes */
+    [data-testid="stDataFrame"] {
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+
+    /* Tabs */
+    button[data-baseweb="tab"] {
+        color: #94a3b8 !important;
+        font-weight: 600;
+    }
+
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #60a5fa !important;
+    }
+
+
+    /* Dividers */
+    hr {
+        border-color: rgba(148, 163, 184, 0.14) !important;
+    }
+
+
+    /* Success message */
+    div[data-testid="stAlert"] {
+        border-radius: 10px;
+    }
+
+
+    /* Search / filter section */
+    div[data-testid="stTextInput"] {
+        margin-bottom: 10px;
+    }
+
+
+    /* Code blocks */
+    code {
+        background-color: #111f33 !important;
+        color: #93c5fd !important;
+    }
+
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+
+    ::-webkit-scrollbar-track {
+        background: #07111f;
+    }
+
+
+    ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 10px;
+    }
+
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+    }
+
+</style>
+""", unsafe_allow_html=True)
 user_email = st.session_state.get(
     "user_email",
     "RM User"

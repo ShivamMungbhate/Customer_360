@@ -1,5 +1,6 @@
 import streamlit as st
 
+
 from utils.session_management import init_session_state
 
 st.set_page_config(
@@ -8,6 +9,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+
 init_session_state()
 
 

@@ -8,6 +8,374 @@ from services.ai_service import (
 from services.customer_service import fetch_customer_360
 from utils.security import enforce_customer_boundary, enforce_employee_boundary
 
+st.markdown("""
+<style>
+
+/* ---------- Global ---------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.stApp {
+    background:
+        radial-gradient(
+            circle at 8% 5%,
+            rgba(59, 130, 246, 0.14),
+            transparent 32%
+        ),
+        radial-gradient(
+            circle at 92% 8%,
+            rgba(139, 92, 246, 0.13),
+            transparent 30%
+        ),
+        linear-gradient(
+            135deg,
+            #070b14 0%,
+            #0b1220 50%,
+            #080d18 100%
+        );
+
+    color: #e5e7eb;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Main content width / spacing */
+[data-testid="stMainBlockContainer"] {
+    max-width: 1400px;
+    padding-top: 2.4rem;
+    padding-bottom: 4rem;
+}
+
+/* ---------- Header ---------- */
+
+h1 {
+    font-size: clamp(2rem, 4vw, 2.8rem) !important;
+    font-weight: 800 !important;
+    letter-spacing: -1.4px;
+    line-height: 1.2 !important;
+
+    background: linear-gradient(
+        100deg,
+        #ffffff 10%,
+        #93c5fd 55%,
+        #c4b5fd 90%
+    );
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    margin-bottom: 0.7rem !important;
+}
+
+h2 {
+    color: #f8fafc !important;
+    font-weight: 750 !important;
+    letter-spacing: -0.5px;
+}
+
+h3 {
+    color: #e2e8f0 !important;
+    font-weight: 700 !important;
+}
+
+p {
+    color: #b8c4d6;
+    line-height: 1.65;
+}
+
+[data-testid="stCaptionContainer"] {
+    color: #7f8da3;
+}
+
+/* ---------- Customer context expander ---------- */
+
+[data-testid="stExpander"] {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(20, 31, 52, 0.92),
+            rgba(12, 20, 35, 0.92)
+        );
+
+    border: 1px solid rgba(96, 165, 250, 0.20);
+    border-radius: 18px;
+    box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+[data-testid="stExpander"]:hover {
+    border-color: rgba(96, 165, 250, 0.38);
+    box-shadow:
+        0 16px 42px rgba(0, 0, 0, 0.22),
+        0 0 25px rgba(59, 130, 246, 0.05);
+}
+
+[data-testid="stExpander"] summary {
+    color: #e2e8f0 !important;
+    font-weight: 650 !important;
+    font-size: 0.96rem;
+    padding: 0.8rem 0.3rem;
+}
+
+/* ---------- Metric cards ---------- */
+
+[data-testid="stMetric"] {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(25, 39, 65, 0.95),
+            rgba(14, 23, 40, 0.95)
+        );
+
+    border: 1px solid rgba(96, 165, 250, 0.18);
+    border-radius: 15px;
+
+    padding: 18px 18px;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-3px);
+
+    border-color: rgba(96, 165, 250, 0.48);
+
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.22),
+        0 0 20px rgba(59, 130, 246, 0.06);
+}
+
+[data-testid="stMetricLabel"] {
+    color: #94a3b8 !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+}
+
+[data-testid="stMetricValue"] {
+    color: #f8fafc !important;
+    font-size: 1.8rem !important;
+    font-weight: 800 !important;
+}
+
+/* ---------- Customer ID info box ---------- */
+
+[data-testid="stAlert"] {
+    border-radius: 13px;
+    border: 1px solid rgba(96, 165, 250, 0.22);
+    background: rgba(30, 64, 175, 0.10);
+    color: #dbeafe;
+}
+
+/* ---------- Text area ---------- */
+
+.stTextArea textarea {
+    background:
+        linear-gradient(
+            145deg,
+            #111b2e,
+            #0e1727
+        ) !important;
+
+    color: #f1f5f9 !important;
+
+    border: 1px solid #334155 !important;
+    border-radius: 15px !important;
+
+    padding: 16px 17px !important;
+
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.96rem !important;
+    line-height: 1.6 !important;
+
+    box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.18);
+    
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.stTextArea textarea:focus {
+    border-color: #60a5fa !important;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.12),
+        0 8px 25px rgba(0, 0, 0, 0.12) !important;
+}
+
+.stTextArea textarea::placeholder {
+    color: #64748b !important;
+}
+
+/* Text area label */
+.stTextArea label {
+    color: #cbd5e1 !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+}
+
+/* ---------- Generate button ---------- */
+
+.stButton > button {
+    min-height: 48px;
+
+    border-radius: 12px;
+
+    border: 1px solid rgba(147, 197, 253, 0.28);
+
+    background:
+        linear-gradient(
+            110deg,
+            #2563eb 0%,
+            #4f46e5 55%,
+            #7c3aed 100%
+        );
+
+    color: #ffffff !important;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 0.94rem;
+    font-weight: 700;
+
+    letter-spacing: 0.1px;
+
+    box-shadow:
+        0 7px 22px rgba(37, 99, 235, 0.20);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+.stButton > button:hover {
+    filter: brightness(1.08);
+
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 10px 28px rgba(59, 130, 246, 0.32);
+
+    border-color: rgba(191, 219, 254, 0.55);
+}
+
+.stButton > button:active {
+    transform: translateY(0) scale(0.985);
+}
+
+/* ---------- AI Response ---------- */
+
+/*
+    The response itself remains normal Streamlit markdown.
+    This styling makes the area around the response cleaner
+    without changing the AI output.
+*/
+
+h3 {
+    margin-top: 1.8rem !important;
+}
+
+/* Response markdown */
+[data-testid="stMarkdownContainer"] {
+    color: #d5deeb;
+}
+
+[data-testid="stMarkdownContainer"] strong {
+    color: #f8fafc;
+}
+
+[data-testid="stMarkdownContainer"] code {
+    color: #93c5fd;
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid rgba(96, 165, 250, 0.14);
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+/* AI response lists */
+[data-testid="stMarkdownContainer"] ul,
+[data-testid="stMarkdownContainer"] ol {
+    padding-left: 1.5rem;
+}
+
+[data-testid="stMarkdownContainer"] li {
+    color: #cbd5e1;
+    margin-bottom: 0.35rem;
+}
+
+/* AI response blockquotes */
+[data-testid="stMarkdownContainer"] blockquote {
+    border-left: 3px solid #6366f1;
+    background: rgba(79, 70, 229, 0.08);
+    border-radius: 0 10px 10px 0;
+    padding: 10px 15px;
+    color: #cbd5e1;
+}
+
+/* ---------- Spinner ---------- */
+
+[data-testid="stSpinner"] {
+    color: #93c5fd;
+}
+
+/* ---------- Horizontal spacing ---------- */
+
+hr {
+    border-color: rgba(100, 116, 139, 0.22) !important;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 768px) {
+
+    [data-testid="stMainBlockContainer"] {
+        padding: 1.3rem 1rem 2.5rem;
+    }
+
+    h1 {
+        font-size: 1.85rem !important;
+        letter-spacing: -0.8px;
+    }
+
+    [data-testid="stMetric"] {
+        padding: 14px;
+    }
+
+    [data-testid="stExpander"] {
+        border-radius: 14px;
+    }
+
+    .stButton > button {
+        min-height: 45px;
+    }
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 st.title("🤖 Natural Language AI Assistant")
 
