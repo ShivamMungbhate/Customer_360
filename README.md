@@ -9,7 +9,7 @@ An AI-powered customer insights platform that provides a unified view of custome
 
 ## Demo Credentials
 
-- **Username:** `employee1@customer360`
+- **Username:** `employee1@customer360.demo`
 - **Password:** `1234`
 
 ## Technologies Used
