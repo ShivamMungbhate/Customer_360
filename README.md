@@ -7,6 +7,11 @@ An AI-powered customer insights platform that provides a unified view of custome
 
 [Open Customer 360](https://customer360-efeqf8swyxv379afmknpoy.streamlit.app/)
 
+## Demo Credentials
+
+- **Username:** `employee1@customer360`
+- **Password:** `1234`
+
 ## Technologies Used
 
 - Python
